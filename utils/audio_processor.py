@@ -31,21 +31,43 @@ def download_youtube_audio(url: str) -> str:
     output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
 
     ydl_opts = {
-        "format": "bestaudio/best",
-        "outtmpl": output_path,
+    "format": "bestaudio[ext=m4a]/bestaudio/best",
+    "outtmpl": output_path,
 
-        "quiet": True,
-        "noplaylist": True,
+    "quiet": True,
+    "noplaylist": True,
 
-        # SSL / Cloud fixes
-        "nocheckcertificate": True,
-        "ignoreerrors": False,
-        "no_warnings": True,
+    # SSL / Cloud fixes
+    "nocheckcertificate": True,
+    "ignoreerrors": False,
+    "no_warnings": True,
 
-        # Retry logic
-        "retries": 10,
-        "fragment_retries": 10,
-    }
+    # Retry logic
+    "retries": 10,
+    "fragment_retries": 10,
+
+    # Browser impersonation
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["android", "web"]
+        }
+    },
+
+    # Reduce bot detection
+    "http_headers": {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+    },
+
+    # Force IPv4
+    "source_address": "0.0.0.0",
+
+    # Avoid certificate problems
+    "geo_bypass": True,
+}
 
     try:
 
@@ -192,4 +214,13 @@ def process_input(source: str) -> list:
         print("❌ FULL PROCESSING ERROR")
         traceback.print_exc()
 
-        raise Exception(f"Audio processing failed: {str(e)}")
+        error_message = str(e)
+
+        if "Sign in to confirm you're not a bot" in error_message:
+
+            raise Exception(
+                "YouTube blocked automated access.\n"
+                "Please upload the audio/video file directly."
+            )
+
+        raise Exception(f"Audio processing failed: {error_message}")
