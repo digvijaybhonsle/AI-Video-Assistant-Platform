@@ -1,3 +1,14 @@
+---
+title: AI Video Assistant Platform
+emoji: 🎥
+colorFrom: blue
+colorTo: purple
+sdk: streamlit
+sdk_version: 1.45.1
+app_file: app.py
+pinned: false
+---
+
 # 🎥 AI Video Assistant Platform
 
 **Multilingual AI-Powered Video Understanding & Conversational RAG Assistant**
