@@ -1,21 +1,28 @@
 import yt_dlp
 from pydub import AudioSegment
 import os
+import ssl
 
 DOWNLOAD_DIR = "downloads/"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+ssl._create_default_https_context = ssl._create_unverified_context
+
 def download_youtube_audio(url : str) -> str:
     output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': output_path,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav',
-            'preferredquality': '192',
-        }],
+        "format": "bestaudio/best",
+        "outtmpl": output_path,
+
         "quiet": True,
+        "noplaylist": True,
+
+        "nocheckcertificate": True,
+        "ignoreerrors": True,
+        "no_warnings": True,
+
+        "retries": 10,
+        "fragment_retries": 10,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
