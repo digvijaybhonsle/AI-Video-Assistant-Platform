@@ -2,6 +2,7 @@ import yt_dlp
 from pydub import AudioSegment
 import os
 import ssl
+import traceback
 
 # ============================================================
 # Directories
@@ -19,12 +20,13 @@ os.makedirs(CHUNK_DIR, exist_ok=True)
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-
 # ============================================================
 # Download YouTube Audio
 # ============================================================
 
 def download_youtube_audio(url: str) -> str:
+
+    print(f"🎥 Downloading from URL: {url}")
 
     output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
 
@@ -35,7 +37,7 @@ def download_youtube_audio(url: str) -> str:
         "quiet": True,
         "noplaylist": True,
 
-        # Cloud / SSL Fixes
+        # SSL / Cloud fixes
         "nocheckcertificate": True,
         "ignoreerrors": False,
         "no_warnings": True,
@@ -52,31 +54,40 @@ def download_youtube_audio(url: str) -> str:
             info = ydl.extract_info(url, download=True)
 
             if info is None:
-                raise Exception("Failed to extract video information.")
+                raise Exception("Failed to extract YouTube video information.")
 
             downloaded_file = ydl.prepare_filename(info)
 
-            print(f"Downloaded: {downloaded_file}")
+            print(f"✅ Downloaded file path: {downloaded_file}")
+
+            if not os.path.exists(downloaded_file):
+                raise FileNotFoundError(
+                    f"Downloaded audio file not found: {downloaded_file}"
+                )
 
             return downloaded_file
 
     except Exception as e:
 
-        print(f"❌ YouTube download failed: {e}")
-        return None
+        print("❌ YouTube download failed")
+        traceback.print_exc()
+
+        raise Exception(f"YouTube download failed: {str(e)}")
 
 
 # ============================================================
-# Convert Any Audio To WAV
+# Convert Audio To WAV
 # ============================================================
 
 def convert_to_wav(input_file: str) -> str:
+
+    print(f"🎵 Converting file: {input_file}")
 
     if input_file is None:
         raise ValueError("Input file is None.")
 
     if not os.path.exists(input_file):
-        raise FileNotFoundError(f"File not found: {input_file}")
+        raise FileNotFoundError(f"Input file not found: {input_file}")
 
     output_file = os.path.splitext(input_file)[0] + ".wav"
 
@@ -86,14 +97,16 @@ def convert_to_wav(input_file: str) -> str:
 
         audio.export(output_file, format="wav")
 
-        print(f"Converted to WAV: {output_file}")
+        print(f"✅ WAV saved at: {output_file}")
 
         return output_file
 
     except Exception as e:
 
-        print(f"❌ WAV conversion failed: {e}")
-        raise
+        print("❌ WAV conversion failed")
+        traceback.print_exc()
+
+        raise Exception(f"WAV conversion failed: {str(e)}")
 
 
 # ============================================================
@@ -101,6 +114,8 @@ def convert_to_wav(input_file: str) -> str:
 # ============================================================
 
 def chunk_audio(wav_path: str, chunk_minutes: int = 10) -> list:
+
+    print(f"✂️ Chunking WAV file: {wav_path}")
 
     if not os.path.exists(wav_path):
         raise FileNotFoundError(f"WAV file not found: {wav_path}")
@@ -124,6 +139,11 @@ def chunk_audio(wav_path: str, chunk_minutes: int = 10) -> list:
 
         chunks.append(chunk_path)
 
+    print(f"✅ Generated {len(chunks)} chunk(s)")
+
+    if len(chunks) == 0:
+        raise Exception("No audio chunks were created.")
+
     return chunks
 
 
@@ -139,14 +159,11 @@ def process_input(source: str) -> list:
         # YouTube URL
         # ----------------------------------------------------
 
-        if source.startswith("http://") or source.startswith("https://"):
+        if "youtube.com" in source or "youtu.be" in source:
 
-            print("Detected YouTube URL. Downloading audio...")
+            print("🎥 Detected YouTube URL")
 
             downloaded_file = download_youtube_audio(source)
-
-            if downloaded_file is None:
-                raise Exception("YouTube download failed.")
 
             wav_path = convert_to_wav(downloaded_file)
 
@@ -156,15 +173,13 @@ def process_input(source: str) -> list:
 
         else:
 
-            print("Detected local file. Converting to WAV...")
+            print("📁 Detected local file")
 
             wav_path = convert_to_wav(source)
 
         # ----------------------------------------------------
         # Chunk Audio
         # ----------------------------------------------------
-
-        print("Chunking audio...")
 
         chunks = chunk_audio(wav_path)
 
@@ -174,6 +189,7 @@ def process_input(source: str) -> list:
 
     except Exception as e:
 
-        print(f"❌ Processing failed: {e}")
+        print("❌ FULL PROCESSING ERROR")
+        traceback.print_exc()
 
-        return []
+        raise Exception(f"Audio processing failed: {str(e)}")
