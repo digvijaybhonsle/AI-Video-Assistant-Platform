@@ -4,12 +4,13 @@ services:
     env: python
     plan: free
 
-    buildCommand: |
-      pip install -r requirements.txt
-
-    startCommand: |
-      streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
 
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
