@@ -9,6 +9,7 @@ services:
         value: 3.11.9
 
     buildCommand: |
+      python --version
       pip install -r requirements.txt
 
     startCommand: |
