@@ -17,6 +17,21 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+with st.spinner("🚀 Initializing AI Video Assistant... This may take 10-20 seconds on first load"):
+    pass
+
+# Lazy loading / caching heavy imports
+@st.cache_resource
+def load_models():
+    # Import heavy libraries only when needed
+    import torch
+    # Add your model loading here later
+    return "models loaded"
+
+# Then call it early
+load_models()
+
+
 # ─── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
