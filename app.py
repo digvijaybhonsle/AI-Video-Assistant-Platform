@@ -17,7 +17,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-st.info("🚀 Initializing AI Video Assistant...")
 
 
 # ─── Lazy Import Wrappers ───────────────────────────────────
@@ -384,8 +383,13 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown('<span class="badge badge-purple">Input</span>', unsafe_allow_html=True)
+
     source = st.text_input("YouTube URL or File Path", placeholder="https://youtube.com/watch?v=... or upload file")
     language = st.selectbox("Language", ["english", "hinglish"], index=0)
+    uploaded_file = st.file_uploader(
+        "Upload Audio / Video",
+        type=["mp3", "wav", "mp4", "m4a"]
+    )
     run_btn = st.button("⚡ Analyse", use_container_width=True, type="primary")
 
     if st.session_state.pipeline_done:
@@ -406,9 +410,14 @@ st.markdown('<div class="hero-title">AI Video Assistant</div>', unsafe_allow_htm
 st.markdown('<div class="hero-sub">Transcribe · Summarise · Chat with your meetings</div>', unsafe_allow_html=True)
 st.markdown("---")
 
-# ─── Pipeline Execution ─────────────────────────────────────────────────────────
-if run_btn and source.strip():
+# ─── Pipeline Execution ─────────────────────────────────
+
+if run_btn and (source.strip() or uploaded_file):
+
+    transcript = None
+
     try:
+
         # Reset state
         st.session_state.pipeline_done = False
         st.session_state.result = None
@@ -418,67 +427,48 @@ if run_btn and source.strip():
         load_heavy_dependencies()
 
         progress_bar = st.progress(0)
+
         status_box = st.empty()
+
         log_container = st.container()
 
-        def update_step(step_key: str, message: str, progress: int):
-            st.session_state.pipeline_steps[step_key] = "active"
+        def update_step(
+            step_key: str,
+            message: str,
+            progress: int
+        ):
+
+            st.session_state.pipeline_steps[
+                step_key
+            ] = "active"
+
             progress_bar.progress(progress)
+
             status_box.info(message)
 
             with log_container:
                 st.write(message)
 
         # ====================================================
-        # STEP 1 — GET TRANSCRIPT
+        # FILE UPLOAD FLOW → WHISPER
         # ====================================================
 
-        transcript = None
-
-        try:
-            update_step(
-                "transcript",
-                "📺 Fetching YouTube transcript...",
-                20
-            )
-
-            from utils.youtube_transcript import (
-                fetch_youtube_transcript
-            )
-
-            transcript = fetch_youtube_transcript(source)
-
-            st.success(
-                "✅ Transcript fetched directly from YouTube subtitles"
-            )
-
-        except Exception as transcript_error:
-
-            st.warning(
-                "⚠️ No transcript available. "
-                "Falling back to Whisper transcription..."
-            )
-
-            # ====================================================
-            # STEP 2 — AUDIO PROCESSING
-            # ====================================================
+        if uploaded_file:
 
             update_step(
                 "audio",
-                "🎵 Downloading and processing audio...",
-                35
+                "📂 Processing uploaded file...",
+                25
             )
 
-            chunks = lazy_process_input(source)
-
-            # ====================================================
-            # STEP 3 — WHISPER TRANSCRIPTION
-            # ====================================================
+            chunks = lazy_process_input(
+                uploaded_file
+            )
 
             update_step(
                 "transcript",
                 f"📝 Transcribing with Whisper ({language.title()})...",
-                50
+                45
             )
 
             transcript = lazy_transcribe_all(
@@ -486,20 +476,64 @@ if run_btn and source.strip():
                 language
             )
 
+            st.success(
+                "✅ Whisper transcription completed"
+            )
+
         # ====================================================
-        # STEP 4 — TITLE GENERATION
+        # YOUTUBE URL FLOW → TRANSCRIPT API
+        # ====================================================
+
+        elif source.strip():
+
+            update_step(
+                "transcript",
+                "📺 Fetching YouTube transcript...",
+                25
+            )
+
+            from utils.youtube_transcript import (
+                fetch_youtube_transcript
+            )
+
+            try:
+
+                transcript = (
+                    fetch_youtube_transcript(
+                        source
+                    )
+                )
+
+                st.success(
+                    "✅ Transcript fetched from YouTube subtitles"
+                )
+
+            except Exception:
+
+                st.error(
+                    "❌ This video does not provide accessible subtitles.\n\n"
+                    "Please upload the audio/video file manually "
+                    "for Whisper transcription."
+                )
+
+                st.stop()
+
+        # ====================================================
+        # TITLE
         # ====================================================
 
         update_step(
             "title",
             "🏷️ Generating title...",
-            65
+            60
         )
 
-        title = lazy_generate_title(transcript)
+        title = lazy_generate_title(
+            transcript
+        )
 
         # ====================================================
-        # STEP 5 — SUMMARY
+        # SUMMARY
         # ====================================================
 
         update_step(
@@ -508,10 +542,12 @@ if run_btn and source.strip():
             75
         )
 
-        summary = lazy_summarize(transcript)
+        summary = lazy_summarize(
+            transcript
+        )
 
         # ====================================================
-        # STEP 6 — EXTRACTION
+        # EXTRACTION
         # ====================================================
 
         update_step(
@@ -520,18 +556,26 @@ if run_btn and source.strip():
             90
         )
 
-        action_items = lazy_extract_action_items(transcript)
-
-        decisions = lazy_extract_key_decisions(
-            transcript
+        action_items = (
+            lazy_extract_action_items(
+                transcript
+            )
         )
 
-        questions = lazy_extract_questions(
-            transcript
+        decisions = (
+            lazy_extract_key_decisions(
+                transcript
+            )
+        )
+
+        questions = (
+            lazy_extract_questions(
+                transcript
+            )
         )
 
         # ====================================================
-        # DELAY RAG INITIALIZATION
+        # DELAY RAG
         # ====================================================
 
         rag_chain = None
@@ -541,12 +585,19 @@ if run_btn and source.strip():
         # ====================================================
 
         st.session_state.result = {
+
             "title": title,
+
             "transcript": transcript,
+
             "summary": summary,
+
             "action_items": action_items,
+
             "key_decisions": decisions,
+
             "open_questions": questions,
+
             "rag_chain": rag_chain,
         }
 
