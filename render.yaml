@@ -10,6 +10,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: STREAMLIT_SERVER_ADDRESS
+        value: 0.0.0.0
+      - key: STREAMLIT_SERVER_PORT
+        value: $PORT
       - key: MISTRAL_API_KEY
         sync: false
       - key: SARVAM_API_KEY
