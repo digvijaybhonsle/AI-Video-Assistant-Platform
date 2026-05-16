@@ -58,7 +58,7 @@ def lazy_ask_question(chain, question):
     from core.rag_engine import ask_question
     return ask_question(chain, question)
 
-# ─── Custom CSS (Unchanged) ─────────────────────────────────────────────────────
+# ─── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
@@ -79,7 +79,7 @@ st.markdown("""
     --danger: #ef4444;
 }
 
-/* Rest of your CSS remains exactly the same */
+/* ── Global Reset ── */
 html, body, [class*="css"] {
     font-family: 'JetBrains Mono', monospace;
     background-color: var(--bg) !important;
@@ -90,6 +90,7 @@ html, body, [class*="css"] {
     background: var(--bg) !important;
 }
 
+/* Animated grid background */
 .stApp::before {
     content: '';
     position: fixed;
@@ -103,18 +104,246 @@ html, body, [class*="css"] {
     z-index: 0;
 }
 
-/* ... [All your existing CSS remains unchanged] ... */
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: var(--surface) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: var(--text) !important;
+}
+
+/* ── Headings ── */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Syne', sans-serif !important;
+    color: var(--text) !important;
+}
+
+/* ── Hero Title ── */
+.hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0;
+    background: linear-gradient(135deg, #ffffff 0%, var(--accent-glow) 50%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+}
+
+/* ── Cards ── */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.card:hover {
+    border-color: var(--accent);
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+}
+
+.card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-content {
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--text);
+}
+
+/* ── Accent Badge ── */
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.badge-purple { background: rgba(124,58,237,0.2); color: var(--accent-glow); border: 1px solid rgba(124,58,237,0.3); }
+.badge-cyan   { background: rgba(6,182,212,0.15); color: var(--accent-2);    border: 1px solid rgba(6,182,212,0.3); }
+.badge-green  { background: rgba(16,185,129,0.15); color: var(--success);    border: 1px solid rgba(16,185,129,0.3); }
+
+/* ── Input & Buttons ── */
+.stTextInput > div > div > input,
+.stSelectbox > div > div {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    color: var(--text) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+}
+
+.stTextInput > div > div > input:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 2px rgba(124,58,237,0.2) !important;
+}
+
+.stButton > button {
+    background: linear-gradient(135deg, var(--accent), #5b21b6) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.875rem !important;
+    letter-spacing: 0.05em !important;
+    padding: 0.6rem 1.5rem !important;
+    transition: all 0.2s !important;
+    text-transform: uppercase !important;
+}
+
 .stButton > button:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 8px 25px rgba(124,58,237,0.4) !important;
 }
 
+/* Secondary button */
+.stButton > button[kind="secondary"] {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* ── Progress / Status ── */
+.status-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-2);
+    border-radius: 8px;
+    margin: 0.4rem 0;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+}
+
+.status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dot-active   { background: var(--accent-glow); box-shadow: 0 0 8px var(--accent-glow); animation: pulse 1.5s infinite; }
+.dot-done     { background: var(--success); }
+.dot-pending  { background: var(--border); }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+
+/* ── Chat ── */
+.chat-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    max-height: 420px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.chat-msg {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.chat-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.chat-bubble {
+    display: inline-block;
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    max-width: 90%;
+}
+
+.user-label  { color: var(--accent-glow); }
+.bot-label   { color: var(--accent-2); }
+
+.user-bubble { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.25); align-self: flex-end; }
+.bot-bubble  { background: rgba(6,182,212,0.1);  border: 1px solid rgba(6,182,212,0.2);   align-self: flex-start; }
+
+/* ── Divider ── */
+hr {
+    border: none !important;
+    border-top: 1px solid var(--border) !important;
+    margin: 1.5rem 0 !important;
+}
+
+/* ── Transcript box ── */
+.transcript-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    max-height: 300px;
+    overflow-y: auto;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── Stale Streamlit elements ── */
+.stProgress > div > div > div { background: var(--accent) !important; }
+.stSpinner > div { border-top-color: var(--accent) !important; }
+[data-testid="stMarkdownContainer"] p { color: var(--text) !important; }
+label { color: var(--text-muted) !important; font-size: 0.8rem !important; }
+
+/* scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ─── Session State ──────────────────────────────────────────────────────────────
 if "result" not in st.session_state:
@@ -196,30 +425,121 @@ if run_btn and source.strip():
             st.session_state.pipeline_steps[step_key] = "active"
             progress_bar.progress(progress)
             status_box.info(message)
+
             with log_container:
                 st.write(message)
 
-        # ====================== PIPELINE ======================
-        update_step("audio", "🎵 Step 1/6 — Processing audio...", 15)
-        chunks = lazy_process_input(source)
-        update_step("transcript", f"📝 Step 2/6 — Transcribing with {language.title()}...", 40)
-        transcript = lazy_transcribe_all(chunks, language)
+        # ====================================================
+        # STEP 1 — GET TRANSCRIPT
+        # ====================================================
 
-        update_step("title", "🏷️ Step 3/6 — Generating title...", 55)
+        transcript = None
+
+        try:
+            update_step(
+                "transcript",
+                "📺 Fetching YouTube transcript...",
+                20
+            )
+
+            from utils.youtube_transcript import (
+                fetch_youtube_transcript
+            )
+
+            transcript = fetch_youtube_transcript(source)
+
+            st.success(
+                "✅ Transcript fetched directly from YouTube subtitles"
+            )
+
+        except Exception as transcript_error:
+
+            st.warning(
+                "⚠️ No transcript available. "
+                "Falling back to Whisper transcription..."
+            )
+
+            # ====================================================
+            # STEP 2 — AUDIO PROCESSING
+            # ====================================================
+
+            update_step(
+                "audio",
+                "🎵 Downloading and processing audio...",
+                35
+            )
+
+            chunks = lazy_process_input(source)
+
+            # ====================================================
+            # STEP 3 — WHISPER TRANSCRIPTION
+            # ====================================================
+
+            update_step(
+                "transcript",
+                f"📝 Transcribing with Whisper ({language.title()})...",
+                50
+            )
+
+            transcript = lazy_transcribe_all(
+                chunks,
+                language
+            )
+
+        # ====================================================
+        # STEP 4 — TITLE GENERATION
+        # ====================================================
+
+        update_step(
+            "title",
+            "🏷️ Generating title...",
+            65
+        )
+
         title = lazy_generate_title(transcript)
 
-        update_step("summary", "📄 Step 4/6 — Creating summary...", 70)
+        # ====================================================
+        # STEP 5 — SUMMARY
+        # ====================================================
+
+        update_step(
+            "summary",
+            "📄 Creating summary...",
+            75
+        )
+
         summary = lazy_summarize(transcript)
 
-        update_step("extract", "🔍 Step 5/6 — Extracting insights...", 85)
+        # ====================================================
+        # STEP 6 — EXTRACTION
+        # ====================================================
+
+        update_step(
+            "extract",
+            "🔍 Extracting insights...",
+            90
+        )
+
         action_items = lazy_extract_action_items(transcript)
-        decisions = lazy_extract_key_decisions(transcript)
-        questions = lazy_extract_questions(transcript)
 
-        update_step("rag", "🧠 Step 6/6 — Building RAG engine...", 95)
-        rag_chain = lazy_build_rag_chain(transcript)
+        decisions = lazy_extract_key_decisions(
+            transcript
+        )
 
-        # Save results
+        questions = lazy_extract_questions(
+            transcript
+        )
+
+        # ====================================================
+        # DELAY RAG INITIALIZATION
+        # ====================================================
+
+        rag_chain = None
+
+        # ====================================================
+        # SAVE RESULTS
+        # ====================================================
+
         st.session_state.result = {
             "title": title,
             "transcript": transcript,
@@ -229,15 +549,26 @@ if run_btn and source.strip():
             "open_questions": questions,
             "rag_chain": rag_chain,
         }
+
         st.session_state.pipeline_done = True
 
-        status_box.success("🎉 Analysis Completed Successfully!")
+        progress_bar.progress(100)
+
+        status_box.success(
+            "🎉 Analysis Completed Successfully!"
+        )
 
     except Exception as e:
-        st.error(f"❌ Pipeline Failed: {str(e)}")
+
+        st.error(
+            f"❌ Pipeline Failed: {str(e)}"
+        )
+
         with log_container:
             st.error(traceback.format_exc())
+
         st.session_state.pipeline_done = False
+
 
 # ─── Results Display (UI Unchanged) ─────────────────────────────────────────────
 if st.session_state.result:
