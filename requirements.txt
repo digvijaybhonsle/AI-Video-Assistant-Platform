@@ -20,11 +20,10 @@ ffmpeg-python==0.2.0
 # ── Whisper + Torch (CPU Only) ─────────────────────
 openai-whisper @ git+https://github.com/openai/whisper.git
 
-torch==2.3.1+cpu
-torchaudio==2.3.1+cpu
-torchvision==0.18.1+cpu
+torch==2.3.1
+torchaudio==2.3.1
+torchvision==0.18.1
 
--f https://download.pytorch.org/whl/cpu
 
 # ── Translation ─────────────────────────────────────
 deep-translator==1.11.4
