@@ -361,49 +361,177 @@ st.markdown('<div class="hero-sub">Transcribe · Summarise · Chat with your mee
 st.markdown("---")
 
 # ── Run Pipeline ────────────────────────────────────────────────────────────────
+# ── Run Pipeline ────────────────────────────────────────────────────────────────
+
 if run_btn:
+
     if not source.strip():
+
         st.error("Please enter a YouTube URL or file path.")
+
     else:
+
+        # ------------------------------------------------------------
+        # Reset Session State
+        # ------------------------------------------------------------
+
         st.session_state.pipeline_done = False
         st.session_state.result = None
         st.session_state.chat_history = []
         st.session_state.pipeline_steps = {}
 
-        progress_placeholder = st.empty()
+        # ------------------------------------------------------------
+        # UI Placeholders
+        # ------------------------------------------------------------
 
-        def update_step(key, state):
-            st.session_state.pipeline_steps[key] = state
+        progress_bar = st.progress(0)
+
+        status_box = st.empty()
+
+        log_container = st.container()
+
+        # ------------------------------------------------------------
+        # Helper Functions
+        # ------------------------------------------------------------
+
+        def update_step(step_name, message, progress_value):
+
+            st.session_state.pipeline_steps[step_name] = message
+
+            progress_bar.progress(progress_value)
+
+            status_box.info(message)
+
+            with log_container:
+                st.write(message)
+
+        # ------------------------------------------------------------
+        # Pipeline Execution
+        # ------------------------------------------------------------
 
         try:
-            with progress_placeholder.container():
-                st.info("⚙️ Pipeline running — see sidebar for live status…")
 
-            update_step("audio", "active")
+            # ========================================================
+            # STEP 1 — Audio Processing
+            # ========================================================
+
+            update_step(
+                "audio",
+                "🎵 Step 1/6 — Processing audio input...",
+                10
+            )
+
             chunks = process_input(source)
-            update_step("audio", "done")
 
-            update_step("transcript", "active")
+            if not chunks:
+                raise Exception("Audio processing failed.")
+
+            update_step(
+                "audio_done",
+                f"✅ Audio processed successfully ({len(chunks)} chunks created)",
+                20
+            )
+
+            # ========================================================
+            # STEP 2 — Transcription
+            # ========================================================
+
+            update_step(
+                "transcript",
+                f"📝 Step 2/6 — Generating transcript using {language.title()} model...",
+                35
+            )
+
             transcript = transcribe_all(chunks, language)
-            update_step("transcript", "done")
 
-            update_step("title", "active")
+            if not transcript or len(transcript.strip()) == 0:
+                raise Exception("Transcript generation failed.")
+
+            update_step(
+                "transcript_done",
+                "✅ Transcript generated successfully",
+                50
+            )
+
+            # ========================================================
+            # STEP 3 — Title Generation
+            # ========================================================
+
+            update_step(
+                "title",
+                "🏷️ Step 3/6 — Generating AI title...",
+                60
+            )
+
             title = generate_title(transcript)
-            update_step("title", "done")
 
-            update_step("summary", "active")
+            update_step(
+                "title_done",
+                "✅ AI title generated",
+                65
+            )
+
+            # ========================================================
+            # STEP 4 — Summary
+            # ========================================================
+
+            update_step(
+                "summary",
+                "📄 Step 4/6 — Creating transcript summary...",
+                75
+            )
+
             summary = summarize(transcript)
-            update_step("summary", "done")
 
-            update_step("extract", "active")
-            action_items  = extract_action_items(transcript)
-            decisions     = extract_key_decisions(transcript)
-            questions     = extract_questions(transcript)
-            update_step("extract", "done")
+            update_step(
+                "summary_done",
+                "✅ Summary generated",
+                80
+            )
 
-            update_step("rag", "active")
+            # ========================================================
+            # STEP 5 — Extraction
+            # ========================================================
+
+            update_step(
+                "extract",
+                "🧠 Step 5/6 — Extracting insights, actions, and questions...",
+                85
+            )
+
+            action_items = extract_action_items(transcript)
+
+            decisions = extract_key_decisions(transcript)
+
+            questions = extract_questions(transcript)
+
+            update_step(
+                "extract_done",
+                "✅ Insights extracted successfully",
+                90
+            )
+
+            # ========================================================
+            # STEP 6 — RAG Pipeline
+            # ========================================================
+
+            update_step(
+                "rag",
+                "🔎 Step 6/6 — Building RAG knowledge base...",
+                95
+            )
+
             rag_chain = build_rag_chain(transcript)
-            update_step("rag", "done")
+
+            update_step(
+                "rag_done",
+                "✅ RAG pipeline ready",
+                100
+            )
+
+            # ========================================================
+            # Save Results
+            # ========================================================
 
             st.session_state.result = {
                 "title": title,
@@ -414,17 +542,33 @@ if run_btn:
                 "open_questions": questions,
                 "rag_chain": rag_chain,
             }
+
             st.session_state.pipeline_done = True
-            progress_placeholder.success("✅ Analysis complete!")
-            time.sleep(0.5)
-            progress_placeholder.empty()
+
+            # ========================================================
+            # Final Success
+            # ========================================================
+
+            status_box.success(
+                "🎉 AI Video Analysis Completed Successfully!"
+            )
+
+            st.balloons()
+
+            time.sleep(1)
+
             st.rerun()
 
         except Exception as e:
-            for k in ["audio","transcript","title","summary","extract","rag"]:
-                if st.session_state.pipeline_steps.get(k) == "active":
-                    st.session_state.pipeline_steps[k] = "pending"
-            progress_placeholder.error(f"❌ Error: {e}")
+
+            progress_bar.progress(0)
+
+            status_box.error(f"❌ Pipeline Failed: {e}")
+
+            with log_container:
+                st.error("Execution stopped due to pipeline failure.")
+
+            st.session_state.pipeline_done = False
 
 # ── Results ──────────────────────────────────────────────────────────────────────
 if st.session_state.result:
