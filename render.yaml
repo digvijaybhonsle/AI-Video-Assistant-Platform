@@ -1,29 +1,31 @@
 services:
   - type: web
     name: ai-video-assistant
-    env: python
-    plan: free
+
+    runtime: python
 
     buildCommand: |
-      pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+      pip install --upgrade pip
       pip install -r requirements.txt
 
-    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    startCommand: >
+      streamlit run app.py
+      --server.port $PORT
+      --server.address 0.0.0.0
+      --server.headless true
 
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
-      
-      # Streamlit Configuration
-      - key: STREAMLIT_SERVER_ADDRESS
-        value: 0.0.0.0
-      - key: STREAMLIT_SERVER_PORT
-        value: $PORT
+
+      - key: TOKENIZERS_PARALLELISM
+        value: false
+
+      - key: PYTORCH_JIT
+        value: "0"
+
       - key: STREAMLIT_SERVER_HEADLESS
         value: true
-      
-      # API Keys (Do NOT commit real keys)
-      - key: MISTRAL_API_KEY
-        sync: false
-      - key: SARVAM_API_KEY
-        sync: false
+
+      - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+        value: false

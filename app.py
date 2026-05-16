@@ -3,13 +3,6 @@ import time
 import traceback
 from dotenv import load_dotenv
 
-# Import your modules
-from utils.audio_processor import process_input
-from core.transcriber import transcribe_all
-from core.summarizer import summarize, generate_title
-from core.extractor import extract_action_items, extract_key_decisions, extract_questions
-from core.rag_engine import build_rag_chain, ask_question
-
 load_dotenv()
 
 # ─── Page Config ────────────────────────────────────────────────────────────────
@@ -19,6 +12,46 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+st.info("🚀 Initializing AI Video Assistant...")
+
+
+# ─── Lazy Import Wrappers ───────────────────────────────────
+
+def lazy_process_input(source):
+    from utils.audio_processor import process_input
+    return process_input(source)
+
+def lazy_transcribe_all(chunks, language):
+    from core.transcriber import transcribe_all
+    return transcribe_all(chunks, language)
+
+def lazy_generate_title(transcript):
+    from core.summarizer import generate_title
+    return generate_title(transcript)
+
+def lazy_summarize(transcript):
+    from core.summarizer import summarize
+    return summarize(transcript)
+
+def lazy_extract_action_items(transcript):
+    from core.extractor import extract_action_items
+    return extract_action_items(transcript)
+
+def lazy_extract_key_decisions(transcript):
+    from core.extractor import extract_key_decisions
+    return extract_key_decisions(transcript)
+
+def lazy_extract_questions(transcript):
+    from core.extractor import extract_questions
+    return extract_questions(transcript)
+
+def lazy_build_rag_chain(transcript):
+    from core.rag_engine import build_rag_chain
+    return build_rag_chain(transcript)
+
+def lazy_ask_question(chain, question):
+    from core.rag_engine import ask_question
+    return ask_question(chain, question)
 
 # ─── Custom CSS (Unchanged) ─────────────────────────────────────────────────────
 st.markdown("""
@@ -163,24 +196,23 @@ if run_btn and source.strip():
 
         # ====================== PIPELINE ======================
         update_step("audio", "🎵 Step 1/6 — Processing audio...", 15)
-        chunks = process_input(source)
-
+        chunks = lazy_process_input(source)
         update_step("transcript", f"📝 Step 2/6 — Transcribing with {language.title()}...", 40)
-        transcript = transcribe_all(chunks, language)
+        transcript = lazy_transcribe_all(chunks, language)
 
         update_step("title", "🏷️ Step 3/6 — Generating title...", 55)
-        title = generate_title(transcript)
+        title = lazy_generate_title(transcript)
 
         update_step("summary", "📄 Step 4/6 — Creating summary...", 70)
-        summary = summarize(transcript)
+        summary = lazy_summarize(transcript)
 
         update_step("extract", "🔍 Step 5/6 — Extracting insights...", 85)
-        action_items = extract_action_items(transcript)
-        decisions = extract_key_decisions(transcript)
-        questions = extract_questions(transcript)
+        action_items = lazy_extract_action_items(transcript)
+        decisions = lazy_extract_key_decisions(transcript)
+        questions = lazy_extract_questions(transcript)
 
         update_step("rag", "🧠 Step 6/6 — Building RAG engine...", 95)
-        rag_chain = build_rag_chain(transcript)
+        rag_chain = lazy_build_rag_chain(transcript)
 
         # Save results
         st.session_state.result = {
@@ -195,7 +227,6 @@ if run_btn and source.strip():
         st.session_state.pipeline_done = True
 
         status_box.success("🎉 Analysis Completed Successfully!")
-        st.balloons()
 
     except Exception as e:
         st.error(f"❌ Pipeline Failed: {str(e)}")
@@ -285,7 +316,16 @@ if st.session_state.result:
     if send_btn and user_input.strip():
         with st.spinner("🤖 Thinking..."):
             try:
-                answer = ask_question(r["rag_chain"], user_input.strip())
+                if r["rag_chain"] is None:
+                    with st.spinner("🧠 Initializing AI chat engine..."):
+                        r["rag_chain"] = lazy_build_rag_chain(
+                            r["transcript"]
+                        )
+
+                answer = lazy_ask_question(
+                r["rag_chain"],
+                user_input.strip()
+                )
                 st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
                 st.session_state.chat_history.append({"role": "assistant", "content": answer})
                 st.rerun()
