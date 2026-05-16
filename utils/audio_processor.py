@@ -145,36 +145,109 @@ def chunk_audio(wav_path: str, chunk_minutes: int = 10) -> List[str]:
 # ============================================================
 # Main Pipeline
 # ============================================================
+def process_input(source) -> List[str]:
+    """
+    Main function:
+    - YouTube URL
+    - Uploaded Streamlit file
+    - Local file path
+    """
 
-def process_input(source: str) -> List[str]:
-    """Main function: Process YouTube URL or Local File"""
     try:
+
         print("🚀 Starting audio processing...")
 
-        # Optional: Clean old files before processing
+        # Optional cleanup
         cleanup_old_files(max_age_hours=3)
 
-        # YouTube URL
-        if "youtube.com" in source.lower() or "youtu.be" in source.lower():
+        # ====================================================
+        # STREAMLIT FILE UPLOAD
+        # ====================================================
+
+        if not isinstance(source, str):
+
+            print("📂 Uploaded file detected")
+
+            suffix = os.path.splitext(
+                source.name
+            )[1]
+
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=suffix
+            ) as tmp_file:
+
+                tmp_file.write(
+                    source.read()
+                )
+
+                audio_file = tmp_file.name
+
+            print(
+                f"✅ Temporary file created: {audio_file}"
+            )
+
+        # ====================================================
+        # YOUTUBE URL
+        # ====================================================
+
+        elif (
+            "youtube.com" in source.lower()
+            or "youtu.be" in source.lower()
+        ):
+
             print("🔗 YouTube link detected")
-            audio_file = download_youtube_audio(source)
-        # Local uploaded file
+
+            audio_file = download_youtube_audio(
+                source
+            )
+
+        # ====================================================
+        # LOCAL FILE PATH
+        # ====================================================
+
         else:
-            print("📁 Local file detected")
+
+            print("📁 Local file path detected")
+
             if not os.path.exists(source):
-                raise FileNotFoundError(f"Uploaded file not found: {source}")
+
+                raise FileNotFoundError(
+                    f"File not found: {source}"
+                )
+
             audio_file = source
 
-        # Convert to WAV
-        wav_path = convert_to_wav(audio_file)
+        # ====================================================
+        # CONVERT TO WAV
+        # ====================================================
 
-        # Create chunks
-        chunks = chunk_audio(wav_path, chunk_minutes=10)
+        wav_path = convert_to_wav(
+            audio_file
+        )
 
-        print(f"✅ Audio processing completed — {len(chunks)} chunk(s) ready")
+        # ====================================================
+        # CREATE CHUNKS
+        # ====================================================
+
+        chunks = chunk_audio(
+            wav_path,
+            chunk_minutes=10
+        )
+
+        print(
+            f"✅ Audio processing completed — "
+            f"{len(chunks)} chunk(s) ready"
+        )
+
         return chunks
 
     except Exception as e:
+
         print("❌ Audio processing failed")
+
         traceback.print_exc()
-        raise Exception(f"Processing failed: {str(e)}")
+
+        raise Exception(
+            f"Processing failed: {str(e)}"
+        )
