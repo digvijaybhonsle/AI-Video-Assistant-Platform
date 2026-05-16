@@ -10,6 +10,7 @@ wheel>=0.43.0
 
 # ── Streamlit UI ────────────────────────────────────
 streamlit==1.39.0
+streamlit-extras>=0.4.0           # Additional Streamlit widgets / utilities
 watchdog==4.0.1
 
 # ── Audio / Video ───────────────────────────────────
