@@ -1,0 +1,47 @@
+# Environment Variables
+.env
+
+# Virtual Environment
+.venv/
+
+# Python Cache
+__pycache__/
+
+# Streamlit
+.streamlit/
+
+# ChromaDB
+chroma_db/
+vector_db/
+
+# Uploaded / Downloaded Files
+uploads/
+downloads/
+
+# Audio Chunks
+chunks/
+
+# Logs
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Python Build Files
+*.pyc
+*.pyo
+*.pyd
+
+# VS Code
+.vscode/
+
+# Whisper Models Cache
+.cache/
+
+# Temporary Files
+temp/
+tmp/
