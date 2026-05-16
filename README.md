@@ -66,20 +66,19 @@ flowchart TD
 ```bash
 AI-Video-Assistant-Platform/
 ├── app.py                      # Main Streamlit application
+├── test.py                     # testing of features
 ├── requirements.txt
 ├── README.md
 ├── .env.example
 ├── .env                        # (gitignore'd)
 ├── core/
-│   ├── __init__.py
-│   ├── rag.py                  # RAG pipeline
-│   ├── transcription.py
-│   ├── summarization.py
-│   └── embeddings.py
+│   ├── extractor.py
+│   ├── rag_engine.py                  # RAG pipeline
+│   ├── transcriber.py
+│   ├── summarizer.py
+│   └── vector_store.py
 ├── utils/
-│   ├── video_utils.py
-│   ├── audio_utils.py
-│   └── text_utils.py
+│   ├── audio_processor.py
 ├── uploads/                    # Temporary video storage
 ├── downloads/                  # Processed outputs
 ├── chunks/                     # Text chunks
