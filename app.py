@@ -2,8 +2,13 @@ import streamlit as st
 import time
 import traceback
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["PYTORCH_JIT"] = "0"
+os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
 
 # ─── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
