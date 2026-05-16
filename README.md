@@ -1,4 +1,3 @@
-```markdown
 # 🎥 AI Video Assistant Platform
 
 **Multilingual AI-Powered Video Understanding & Conversational RAG Assistant**
@@ -34,7 +33,6 @@ Built with production-grade tools and a clean, modular architecture.
 
 ## 🏗️ Architecture Flow
 
-```mermaid
 flowchart TD
     A[User Input<br/>YouTube URL or Video Upload] --> B[Audio Extraction<br/>yt-dlp + FFmpeg]
     B --> C[Transcription<br/>Whisper + Sarvam AI]
@@ -44,7 +42,6 @@ flowchart TD
     F --> G[RAG Pipeline<br/>Retrieval + Context]
     G --> H[LLM Response<br/>Mistral AI]
     H --> I[Interactive Chat & Insights]
-```
 
 ---
 
@@ -286,4 +283,5 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 **⭐ If you found this project helpful, please star the repository!**
 
 Built with ❤️ for the AI community.
-```
+
+---
