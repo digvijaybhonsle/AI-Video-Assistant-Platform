@@ -91,12 +91,9 @@ if "pipeline_steps" not in st.session_state:
 # ─── Early Model Loading ────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
 def load_heavy_dependencies():
-    """Load heavy libraries once"""
     import torch
     import whisper
-    return "Dependencies loaded"
-
-load_heavy_dependencies()
+    return True
 
 # ─── Helpers ────────────────────────────────────────────────────────────────────
 def step_status(steps: dict, key: str) -> str:
@@ -151,6 +148,8 @@ if run_btn and source.strip():
         st.session_state.chat_history = []
         st.session_state.pipeline_steps = {}
 
+        load_heavy_dependencies()
+
         progress_bar = st.progress(0)
         status_box = st.empty()
         log_container = st.container()
@@ -161,7 +160,6 @@ if run_btn and source.strip():
             status_box.info(message)
             with log_container:
                 st.write(message)
-            time.sleep(0.3)  # Small delay for smooth UX
 
         # ====================== PIPELINE ======================
         update_step("audio", "🎵 Step 1/6 — Processing audio...", 15)
