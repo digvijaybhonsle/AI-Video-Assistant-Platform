@@ -444,47 +444,32 @@ if run_btn and (source.strip() or uploaded_file):
         # ====================================================
 
         def update_step(
-
             step_key: str,
-
             message: str,
-
             progress: int,
-
             status: str = "active"
         ):
-
-            st.session_state.pipeline_steps[
-                step_key
-            ] = status
-
-            st.session_state.current_status = (
-                message
-            )
+            """Update pipeline step status and UI"""
+            st.session_state.pipeline_steps[step_key] = status
+            st.session_state.current_status = message
 
             progress_bar.progress(progress)
 
             if status == "done":
-
                 status_box.success(message)
-
             elif status == "error":
-
                 status_box.error(message)
-
             else:
-
                 status_box.info(message)
 
-            log_container.markdown(f"""
-            <div class="status-bar">
-
-                <div class="status-dot dot-active"></div>
-
-                <span>{message}</span>
-
-            </div>
-            """, unsafe_allow_html=True)
+            # Clean log without complex HTML
+            with log_container:
+                if status == "done":
+                    st.success(f"✅ {message}")
+                elif status == "error":
+                    st.error(f"❌ {message}")
+                else:
+                    st.info(f"⏳ {message}")
 
         def complete_step(step_key: str):
 
@@ -519,116 +504,62 @@ if run_btn and (source.strip() or uploaded_file):
 
             st.stop()
 
-        # ====================================================
-        # YOUTUBE FLOW
-        # ====================================================
+# ====================================================
+# YOUTUBE FLOW
+# ====================================================
 
         if source.strip():
 
-            update_step(
-
-                "upload",
-
-                "📺 Validating YouTube video...",
-
-                10
-            )
-
+            update_step("upload", "📺 Validating YouTube video...", 10)
             time.sleep(0.5)
-
             complete_step("upload")
 
-            update_step(
-
-                "transcript",
-
-                "📝 Fetching YouTube subtitles...",
-
-                20
-            )
-
-            from utils.youtube_transcript import (
-                fetch_youtube_transcript
-            )
+            update_step("transcript", "📝 Fetching transcript...", 20)
 
             try:
+                from utils.youtube_transcript import fetch_youtube_transcript
+                
+                transcript = fetch_youtube_transcript(source)
 
-                transcript = (
-                    fetch_youtube_transcript(
-                        source
-                    )
-                )
-
-                if (
-                    not transcript
-                    or
-                    len(transcript.strip()) < 50
-                ):
-
-                    raise Exception(
-                        "Transcript unavailable"
-                    )
+                if not transcript or len(transcript.strip()) < 50:
+                    raise Exception("Transcript unavailable or too short.")
 
                 complete_step("transcript")
 
-                update_step(
+                update_step("summary", "📄 Sending to AI backend...", 35)
 
-                    "summary",
-
-                    "📄 Sending transcript to AI backend...",
-
-                    35
-                )
-
+                # Clean AI Backend Status Card
                 backend_status_box.markdown("""
                 <div class="card">
-
-                    <div class="card-title">
-                        ⚡ AI Backend
-                    </div>
-
+                    <div class="card-title">⚡ AI Backend Processing</div>
                     <div class="card-content">
-
-                        Processing transcript using:
-
-                        <br><br>
-
-                        • Mistral AI  
-                        • LangChain  
-                        • RAG Pipeline
-
+                        Analyzing transcript using:<br><br>
+                        • Mistral AI<br>
+                        • LangChain RAG<br>
+                        • Advanced Summarization
                     </div>
-
                 </div>
                 """, unsafe_allow_html=True)
 
                 response = requests.post(
-
                     f"{BACKEND_URL}/analyze-transcript",
-
                     json={
-
                         "transcript": transcript,
-
                         "language": language
                     },
-
                     timeout=1800
                 )
 
-            except Exception:
-
+            except Exception as e:
+                backend_status_box.empty()
                 st.warning("""
-                ⚠️ This video does not provide subtitles.
+                ⚠️ **Subtitles not available for this video**
 
-                Please upload the audio/video file
-                manually for Whisper transcription.
+                Please upload the audio/video file manually 
+                for full Whisper transcription support.
                 """)
-
                 st.session_state.processing = False
-
                 st.stop()
-
         # ====================================================
         # FILE FLOW
         # ====================================================
