@@ -3,12 +3,18 @@ import time
 import traceback
 from dotenv import load_dotenv
 import os
+import requests
 
 load_dotenv()
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["PYTORCH_JIT"] = "0"
 os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
+
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "http://127.0.0.1:8000"
+)
 
 # ─── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -17,45 +23,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-
-# ─── Lazy Import Wrappers ───────────────────────────────────
-
-def lazy_process_input(source):
-    from utils.audio_processor import process_input
-    return process_input(source)
-
-def lazy_transcribe_all(chunks, language):
-    from core.transcriber import transcribe_all
-    return transcribe_all(chunks, language)
-
-def lazy_generate_title(transcript):
-    from core.summarizer import generate_title
-    return generate_title(transcript)
-
-def lazy_summarize(transcript):
-    from core.summarizer import summarize
-    return summarize(transcript)
-
-def lazy_extract_action_items(transcript):
-    from core.extractor import extract_action_items
-    return extract_action_items(transcript)
-
-def lazy_extract_key_decisions(transcript):
-    from core.extractor import extract_key_decisions
-    return extract_key_decisions(transcript)
-
-def lazy_extract_questions(transcript):
-    from core.extractor import extract_questions
-    return extract_questions(transcript)
-
-def lazy_build_rag_chain(transcript):
-    from core.rag_engine import build_rag_chain
-    return build_rag_chain(transcript)
-
-def lazy_ask_question(chain, question):
-    from core.rag_engine import ask_question
-    return ask_question(chain, question)
 
 # ─── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -354,12 +321,6 @@ if "pipeline_done" not in st.session_state:
 if "pipeline_steps" not in st.session_state:
     st.session_state.pipeline_steps = {}
 
-# ─── Early Model Loading ────────────────────────────────────────────────────────
-@st.cache_resource(show_spinner=False)
-def load_heavy_dependencies():
-    import torch
-    import whisper
-    return True
 
 # ─── Helpers ────────────────────────────────────────────────────────────────────
 def step_status(steps: dict, key: str) -> str:
@@ -411,20 +372,20 @@ st.markdown('<div class="hero-sub">Transcribe · Summarise · Chat with your mee
 st.markdown("---")
 
 # ─── Pipeline Execution ─────────────────────────────────
+# ─── Pipeline Execution ─────────────────────────────────
 
 if run_btn and (source.strip() or uploaded_file):
 
-    transcript = None
-
     try:
 
-        # Reset state
+        # ====================================================
+        # RESET SESSION
+        # ====================================================
+
         st.session_state.pipeline_done = False
         st.session_state.result = None
         st.session_state.chat_history = []
         st.session_state.pipeline_steps = {}
-
-        load_heavy_dependencies()
 
         progress_bar = st.progress(0)
 
@@ -450,49 +411,18 @@ if run_btn and (source.strip() or uploaded_file):
                 st.write(message)
 
         # ====================================================
-        # FILE UPLOAD FLOW → WHISPER
+        # YOUTUBE TRANSCRIPT FLOW
         # ====================================================
 
-        if uploaded_file:
-
-            update_step(
-                "audio",
-                "📂 Processing uploaded file...",
-                25
-            )
-
-            chunks = lazy_process_input(
-                uploaded_file
-            )
-
-            update_step(
-                "transcript",
-                f"📝 Transcribing with Whisper ({language.title()})...",
-                45
-            )
-
-            transcript = lazy_transcribe_all(
-                chunks,
-                language
-            )
-
-            st.success(
-                "✅ Whisper transcription completed"
-            )
-
-        # ====================================================
-        # YOUTUBE URL FLOW → TRANSCRIPT API
-        # ====================================================
-
-        elif source.strip():
+        if source.strip():
 
             update_step(
                 "transcript",
                 "📺 Fetching YouTube transcript...",
-                25
+                20
             )
 
-            from utils.youtube_transcript import (
+            from backend.utils.youtube_transcript import (
                 fetch_youtube_transcript
             )
 
@@ -504,81 +434,89 @@ if run_btn and (source.strip() or uploaded_file):
                     )
                 )
 
-                st.success(
-                    "✅ Transcript fetched from YouTube subtitles"
+                update_step(
+                    "summary",
+                    "📄 Sending transcript to AI backend...",
+                    40
+                )
+
+                response = requests.post(
+
+                    f"{BACKEND_URL}/analyze-transcript",
+
+                    json={
+                        "transcript": transcript,
+                        "language": language
+                    },
+
+                    timeout=1800
                 )
 
             except Exception:
 
                 st.error(
-                    "❌ This video does not provide accessible subtitles.\n\n"
-                    "Please upload the audio/video file manually "
-                    "for Whisper transcription."
+                    "❌ This YouTube video does not provide subtitles.\n\n"
+                    "Please upload the audio/video file manually."
                 )
 
                 st.stop()
 
         # ====================================================
-        # TITLE
+        # FILE UPLOAD FLOW
         # ====================================================
 
-        update_step(
-            "title",
-            "🏷️ Generating title...",
-            60
-        )
+        elif uploaded_file:
 
-        title = lazy_generate_title(
-            transcript
-        )
+            update_step(
+                "upload",
+                "📤 Uploading file to AI backend...",
+                25
+            )
+
+            response = requests.post(
+
+                f"{BACKEND_URL}/analyze-file",
+
+                files={
+                    "file": (
+                        uploaded_file.name,
+                        uploaded_file,
+                        uploaded_file.type
+                    )
+                },
+
+                data={
+                    "language": language
+                },
+
+                timeout=1800
+            )
 
         # ====================================================
-        # SUMMARY
+        # RESPONSE VALIDATION
         # ====================================================
 
-        update_step(
-            "summary",
-            "📄 Creating summary...",
-            75
-        )
+        progress_bar.progress(75)
 
-        summary = lazy_summarize(
-            transcript
-        )
+        if response.status_code != 200:
+
+            st.error(
+                f"Backend Error: {response.text}"
+            )
+
+            st.stop()
+
+        data = response.json()
 
         # ====================================================
-        # EXTRACTION
+        # EXTRACTION STATUS
         # ====================================================
 
         update_step(
             "extract",
-            "🔍 Extracting insights...",
+            "🔍 Finalizing insights...",
             90
         )
-
-        action_items = (
-            lazy_extract_action_items(
-                transcript
-            )
-        )
-
-        decisions = (
-            lazy_extract_key_decisions(
-                transcript
-            )
-        )
-
-        questions = (
-            lazy_extract_questions(
-                transcript
-            )
-        )
-
-        # ====================================================
-        # DELAY RAG
-        # ====================================================
-
-        rag_chain = None
 
         # ====================================================
         # SAVE RESULTS
@@ -586,19 +524,37 @@ if run_btn and (source.strip() or uploaded_file):
 
         st.session_state.result = {
 
-            "title": title,
+            "title": data.get(
+                "title",
+                "AI Meeting Analysis"
+            ),
 
-            "transcript": transcript,
+            "transcript": data.get(
+                "transcript",
+                ""
+            ),
 
-            "summary": summary,
+            "summary": data.get(
+                "summary",
+                ""
+            ),
 
-            "action_items": action_items,
+            "action_items": data.get(
+                "action_items",
+                ""
+            ),
 
-            "key_decisions": decisions,
+            "key_decisions": data.get(
+                "key_decisions",
+                ""
+            ),
 
-            "open_questions": questions,
+            "open_questions": data.get(
+                "open_questions",
+                ""
+            ),
 
-            "rag_chain": rag_chain,
+            "rag_chain": None,
         }
 
         st.session_state.pipeline_done = True
@@ -620,118 +576,351 @@ if run_btn and (source.strip() or uploaded_file):
 
         st.session_state.pipeline_done = False
 
+# ─── Results Display ─────────────────────────────────────
 
-# ─── Results Display (UI Unchanged) ─────────────────────────────────────────────
 if st.session_state.result:
+
     r = st.session_state.result
 
-    # Title banner
+    # ====================================================
+    # TITLE
+    # ====================================================
+
     st.markdown(f"""
     <div class="card">
-        <div class="card-title">📌 Session Title</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;color:var(--text)">
-            {r['title']}
+        <div class="card-title">
+            📌 Session Title
         </div>
-    </div>""", unsafe_allow_html=True)
 
-    col1, col2 = st.columns([3, 2], gap="medium")
+        <div style="
+            font-family:'Syne',sans-serif;
+            font-size:1.4rem;
+            font-weight:700;
+            color:var(--text)
+        ">
+            {r.get("title", "Meeting Analysis")}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ====================================================
+    # SUMMARY + TRANSCRIPT
+    # ====================================================
+
+    col1, col2 = st.columns(
+        [3, 2],
+        gap="medium"
+    )
 
     with col1:
+
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">📋 Summary</div>
-            <div class="card-content">{r['summary']}</div>
-        </div>""", unsafe_allow_html=True)
+
+            <div class="card-title">
+                📋 Summary
+            </div>
+
+            <div class="card-content">
+                {r.get("summary", "No summary available")}
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
 
     with col2:
-        with st.expander("📝 Full Transcript", expanded=False):
-            st.markdown(f'<div class="transcript-box">{r["transcript"]}</div>', unsafe_allow_html=True)
 
-    # Action Items, Decisions, Questions
-    c1, c2, c3 = st.columns(3, gap="medium")
+        with st.expander(
+            "📝 Full Transcript",
+            expanded=False
+        ):
+
+            st.markdown(
+                f'''
+                <div class="transcript-box">
+                    {r.get("transcript", "")}
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+
+    # ====================================================
+    # INSIGHTS
+    # ====================================================
+
+    c1, c2, c3 = st.columns(
+        3,
+        gap="medium"
+    )
+
     with c1:
+
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">✅ Action Items</div>
-            <div class="card-content">{r['action_items']}</div>
-        </div>""", unsafe_allow_html=True)
+
+            <div class="card-title">
+                ✅ Action Items
+            </div>
+
+            <div class="card-content">
+                {r.get("action_items", "No action items found")}
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
 
     with c2:
+
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">🔑 Key Decisions</div>
-            <div class="card-content">{r['key_decisions']}</div>
-        </div>""", unsafe_allow_html=True)
+
+            <div class="card-title">
+                🔑 Key Decisions
+            </div>
+
+            <div class="card-content">
+                {r.get("key_decisions", "No key decisions found")}
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
 
     with c3:
+
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">❓ Open Questions</div>
-            <div class="card-content">{r['open_questions']}</div>
-        </div>""", unsafe_allow_html=True)
+
+            <div class="card-title">
+                ❓ Open Questions
+            </div>
+
+            <div class="card-content">
+                {r.get("open_questions", "No open questions found")}
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # Chat Interface (Unchanged)
-    st.markdown('<div style="font-family:\'Syne\',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:1rem">💬 Chat with your Meeting</div>', unsafe_allow_html=True)
+    # ====================================================
+    # CHAT HEADER
+    # ====================================================
+
+    st.markdown("""
+    <div style="
+        font-family:'Syne',sans-serif;
+        font-size:1.2rem;
+        font-weight:700;
+        margin-bottom:1rem
+    ">
+        💬 Chat with your Meeting
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ====================================================
+    # CHAT HISTORY
+    # ====================================================
 
     if st.session_state.chat_history:
-        chat_html = '<div class="chat-container">'
-        for msg in st.session_state.chat_history:
-            if msg["role"] == "user":
-                chat_html += f"""
-                <div class="chat-msg" style="align-items:flex-end">
-                    <span class="chat-label user-label">You</span>
-                    <div class="chat-bubble user-bubble">{msg['content']}</div>
-                </div>"""
-            else:
-                chat_html += f"""
-                <div class="chat-msg" style="align-items:flex-start">
-                    <span class="chat-label bot-label">🤖 Assistant</span>
-                    <div class="chat-bubble bot-bubble">{msg['content']}</div>
-                </div>"""
-        chat_html += '</div>'
-        st.markdown(chat_html, unsafe_allow_html=True)
 
-    # Chat Input
-    chat_col1, chat_col2 = st.columns([5, 1], gap="small")
+        chat_html = '<div class="chat-container">'
+
+        for msg in st.session_state.chat_history:
+
+            if msg["role"] == "user":
+
+                chat_html += f"""
+                <div class="chat-msg"
+                     style="align-items:flex-end">
+
+                    <span class="chat-label user-label">
+                        You
+                    </span>
+
+                    <div class="chat-bubble user-bubble">
+                        {msg['content']}
+                    </div>
+
+                </div>
+                """
+
+            else:
+
+                chat_html += f"""
+                <div class="chat-msg"
+                     style="align-items:flex-start">
+
+                    <span class="chat-label bot-label">
+                        🤖 Assistant
+                    </span>
+
+                    <div class="chat-bubble bot-bubble">
+                        {msg['content']}
+                    </div>
+
+                </div>
+                """
+
+        chat_html += "</div>"
+
+        st.markdown(
+            chat_html,
+            unsafe_allow_html=True
+        )
+
+    # ====================================================
+    # CHAT INPUT
+    # ====================================================
+
+    chat_col1, chat_col2 = st.columns(
+        [5, 1],
+        gap="small"
+    )
+
     with chat_col1:
-        user_input = st.text_input("Your question", placeholder="What were the main decisions made?", label_visibility="collapsed")
+
+        user_input = st.text_input(
+            "Your question",
+            placeholder="What were the main decisions made?",
+            label_visibility="collapsed"
+        )
+
     with chat_col2:
-        send_btn = st.button("Send →", use_container_width=True)
+
+        send_btn = st.button(
+            "Send →",
+            use_container_width=True
+        )
+
+    # ====================================================
+    # CHAT REQUEST → BACKEND
+    # ====================================================
 
     if send_btn and user_input.strip():
-        with st.spinner("🤖 Thinking..."):
+
+        with st.spinner(
+            "🤖 Thinking..."
+        ):
+
             try:
-                if r["rag_chain"] is None:
-                    with st.spinner("🧠 Initializing AI chat engine..."):
-                        r["rag_chain"] = lazy_build_rag_chain(
-                            r["transcript"]
+
+                response = requests.post(
+
+                    f"{BACKEND_URL}/chat",
+
+                    json={
+
+                        "question": user_input.strip(),
+
+                        "transcript": r.get(
+                            "transcript",
+                            ""
                         )
+                    },
 
-                answer = lazy_ask_question(
-                r["rag_chain"],
-                user_input.strip()
+                    timeout=600
                 )
-                st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
-                st.session_state.chat_history.append({"role": "assistant", "content": answer})
-                st.rerun()
-            except Exception as e:
-                st.error(f"Chat error: {e}")
 
-    if st.session_state.chat_history and st.button("🗑️ Clear Chat", type="secondary"):
+                if response.status_code != 200:
+
+                    st.error(
+                        "Backend chat request failed"
+                    )
+
+                    st.stop()
+
+                data = response.json()
+
+                answer = data.get(
+                    "answer",
+                    "No response generated"
+                )
+
+                st.session_state.chat_history.append({
+
+                    "role": "user",
+
+                    "content": user_input.strip()
+                })
+
+                st.session_state.chat_history.append({
+
+                    "role": "assistant",
+
+                    "content": answer
+                })
+
+                st.rerun()
+
+            except Exception as e:
+
+                st.error(
+                    f"Chat error: {e}"
+                )
+
+    # ====================================================
+    # CLEAR CHAT
+    # ====================================================
+
+    if (
+        st.session_state.chat_history
+        and
+        st.button(
+            "🗑️ Clear Chat",
+            type="secondary"
+        )
+    ):
+
         st.session_state.chat_history = []
+
         st.rerun()
 
+# ========================================================
+# EMPTY STATE
+# ========================================================
+
 else:
-    # Empty State (Unchanged)
+
     st.markdown("""
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5rem 2rem;text-align:center">
-        <div style="font-size:4rem;margin-bottom:1rem">🎬</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;color:var(--text);margin-bottom:0.5rem">
+    <div style="
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        padding:5rem 2rem;
+        text-align:center
+    ">
+
+        <div style="
+            font-size:4rem;
+            margin-bottom:1rem
+        ">
+            🎬
+        </div>
+
+        <div style="
+            font-family:'Syne',sans-serif;
+            font-size:1.5rem;
+            font-weight:700;
+            color:var(--text);
+            margin-bottom:0.5rem
+        ">
             Ready to Analyse
         </div>
-        <div style="color:var(--text-muted);font-size:0.85rem;max-width:380px;line-height:1.7">
-            Paste a YouTube URL or local file path in the sidebar, choose your language, and hit <strong>Analyse</strong> to get started.
+
+        <div style="
+            color:var(--text-muted);
+            font-size:0.85rem;
+            max-width:420px;
+            line-height:1.7
+        ">
+
+            Upload an MP3/M4A audio file or
+            paste a YouTube video with subtitles
+            to generate AI-powered meeting insights.
+
         </div>
-    </div>""", unsafe_allow_html=True)
+
+    </div>
+    """, unsafe_allow_html=True)
