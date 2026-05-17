@@ -229,3 +229,191 @@ async def analyze_file(
                 f"⚠️ Cleanup failed:\n"
                 f"{cleanup_error}"
             )
+
+# ============================================================
+# CHAT ENDPOINT
+# ============================================================
+
+from pydantic import BaseModel
+
+from backend.core.rag_engine import (
+
+    build_rag_chain,
+
+    ask_question,
+
+    get_rag_chain
+)
+
+# ------------------------------------------------------------
+
+class ChatRequest(BaseModel):
+
+    transcript: str
+
+    question: str
+
+    session_id: str
+
+# ------------------------------------------------------------
+
+@app.post("/chat")
+
+async def chat_with_meeting(
+
+    request: ChatRequest
+):
+
+    try:
+
+        print("\n" + "=" * 60)
+        print("💬 Incoming Chat Request")
+        print("=" * 60)
+
+        transcript = (
+            request.transcript
+        )
+
+        question = (
+            request.question
+        )
+
+        session_id = (
+            request.session_id
+        )
+
+        # ====================================================
+        # VALIDATION
+        # ====================================================
+
+        if (
+            not transcript
+            or
+            len(transcript.strip()) < 100
+        ):
+
+            return JSONResponse(
+
+                status_code=400,
+
+                content={
+
+                    "error":
+                    "Transcript is too short."
+                }
+            )
+
+        if (
+            not question
+            or
+            not question.strip()
+        ):
+
+            return JSONResponse(
+
+                status_code=400,
+
+                content={
+
+                    "error":
+                    "Question is empty."
+                }
+            )
+
+        print(
+            f"❓ Question:\n{question}"
+        )
+
+        # ====================================================
+        # GET CACHED RAG
+        # ====================================================
+
+        start_time = time.time()
+
+        rag_chain = get_rag_chain(
+            session_id
+        )
+
+        # ====================================================
+        # BUILD IF NOT EXISTS
+        # ====================================================
+
+        if rag_chain is None:
+
+            print(
+                "🧠 Creating new RAG chain..."
+            )
+
+            rag_chain = build_rag_chain(
+
+                transcript,
+
+                session_id
+            )
+
+        else:
+
+            print(
+                "⚡ Using cached RAG chain"
+            )
+
+        if not rag_chain:
+
+            return JSONResponse(
+
+                status_code=500,
+
+                content={
+
+                    "error":
+                    "Failed to initialize RAG engine."
+                }
+            )
+
+        # ====================================================
+        # GENERATE ANSWER
+        # ====================================================
+
+        answer = ask_question(
+
+            rag_chain,
+
+            question
+        )
+
+        duration = (
+            time.time()
+            - start_time
+        )
+
+        print(
+            f"✅ Chat response generated "
+            f"in {duration:.1f}s"
+        )
+
+        return JSONResponse(
+
+            status_code=200,
+
+            content={
+
+                "answer": answer
+            }
+        )
+
+    except Exception as e:
+
+        print("\n❌ Chat Error")
+
+        traceback.print_exc()
+
+        return JSONResponse(
+
+            status_code=500,
+
+            content={
+
+                "error":
+                f"Chat failed:\n{str(e)}"
+            }
+        )

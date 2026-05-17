@@ -4,6 +4,7 @@ import traceback
 from dotenv import load_dotenv
 import os
 import requests
+import uuid
 
 load_dotenv()
 
@@ -886,6 +887,92 @@ if run_btn and (source.strip() or uploaded_file):
                 traceback.format_exc()
             )
 
+import re
+
+def format_ai_text(text: str) -> str:
+
+    if not text:
+        return ""
+
+    # ====================================================
+    # REMOVE MARKDOWN HEADERS
+    # ====================================================
+
+    text = re.sub(
+
+        r"^#{1,6}\s*",
+
+        "",
+
+        text,
+
+        flags=re.MULTILINE
+    )
+
+    # ====================================================
+    # REMOVE BOLD MARKDOWN
+    # ====================================================
+
+    text = re.sub(
+
+        r"\*\*(.*?)\*\*",
+
+        r"<strong>\1</strong>",
+
+        text
+    )
+
+    # ====================================================
+    # CONVERT BULLETS
+    # ====================================================
+
+    lines = text.split("\n")
+
+    formatted_lines = []
+
+    inside_list = False
+
+    for line in lines:
+
+        stripped = line.strip()
+
+        if (
+            stripped.startswith("- ")
+            or
+            stripped.startswith("* ")
+        ):
+
+            if not inside_list:
+
+                formatted_lines.append("<ul>")
+
+                inside_list = True
+
+            formatted_lines.append(
+
+                f"<li>{stripped[2:]}</li>"
+            )
+
+        else:
+
+            if inside_list:
+
+                formatted_lines.append("</ul>")
+
+                inside_list = False
+
+            if stripped:
+
+                formatted_lines.append(
+
+                    f"<p>{stripped}</p>"
+                )
+
+    if inside_list:
+
+        formatted_lines.append("</ul>")
+
+    return "".join(formatted_lines)
 
 # ─── Results Display ─────────────────────────────────────
 if st.session_state.result:
@@ -964,7 +1051,7 @@ if st.session_state.result:
         st.markdown(f"""
         <div class="card">
             <div class="card-title">📋 EXECUTIVE SUMMARY</div>
-            <div class="card-content">{summary}</div>
+            <div class="card-content">{format_ai_text(summary)}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1019,70 +1106,355 @@ if st.session_state.result:
     st.markdown("---")
 
     # ====================================================
-    # CHAT SECTION
-    # ====================================================
+# CHAT SECTION
+# ====================================================
+
+st.markdown("""
+<div style="
+    font-family:'Syne',sans-serif;
+    font-size:1.5rem;
+    font-weight:800;
+    margin-bottom:1rem;
+">
+    💬 AI Meeting Chat
+</div>
+""", unsafe_allow_html=True)
+
+# ====================================================
+# CHAT STATUS CARD
+# ====================================================
+
+st.markdown("""
+<div class="card" style="margin-bottom:1rem">
+
+    <div class="card-title">
+        🧠 Context-Aware AI Assistant
+    </div>
+
+    <div class="card-content">
+
+        Ask questions about:
+        <br><br>
+
+        • key decisions  
+        • action items  
+        • meeting discussions  
+        • speaker insights  
+        • technical details  
+        • future tasks
+
+    </div>
+
+</div>
+""", unsafe_allow_html=True)
+
+# ====================================================
+# CHAT HISTORY
+# ====================================================
+
+if st.session_state.chat_history:
+
+    chat_html = """
+    <div class="chat-container">
+    """
+
+    for msg in st.session_state.chat_history:
+
+        if msg["role"] == "user":
+
+            chat_html += f"""
+            <div class="chat-msg"
+                 style="align-items:flex-end">
+
+                <span class="chat-label user-label">
+                    YOU
+                </span>
+
+                <div class="chat-bubble user-bubble">
+                    {msg['content']}
+                </div>
+
+            </div>
+            """
+
+        else:
+
+            chat_html += f"""
+            <div class="chat-msg"
+                 style="align-items:flex-start">
+
+                <span class="chat-label bot-label">
+                    AI ASSISTANT
+                </span>
+
+                <div class="chat-bubble bot-bubble">
+                    {msg['content']}
+                </div>
+
+            </div>
+            """
+
+    chat_html += "</div>"
+
+    st.markdown(
+        chat_html,
+        unsafe_allow_html=True
+    )
+
+else:
+
     st.markdown("""
-    <div style="font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; margin-bottom:1rem;">
-        💬 AI Meeting Chat
+    <div class="card">
+
+        <div class="card-content"
+             style="text-align:center">
+
+            No questions asked yet.
+
+            <br><br>
+
+            Start chatting with your
+            AI-powered meeting assistant.
+
+        </div>
+
     </div>
     """, unsafe_allow_html=True)
 
-    # Chat History
-    if st.session_state.chat_history:
-        chat_html = '<div class="chat-container">'
-        for msg in st.session_state.chat_history:
-            if msg["role"] == "user":
-                chat_html += f"""
-                <div class="chat-msg" style="align-items:flex-end">
-                    <span class="chat-label user-label">YOU</span>
-                    <div class="chat-bubble user-bubble">{msg['content']}</div>
-                </div>"""
-            else:
-                chat_html += f"""
-                <div class="chat-msg" style="align-items:flex-start">
-                    <span class="chat-label bot-label">AI ASSISTANT</span>
-                    <div class="chat-bubble bot-bubble">{msg['content']}</div>
-                </div>"""
-        chat_html += '</div>'
-        st.markdown(chat_html, unsafe_allow_html=True)
+# ====================================================
+# SUGGESTED QUESTIONS
+# ====================================================
 
-    # Chat Input
-    col1, col2 = st.columns([6, 1])
-    with col1:
-        user_input = st.text_input(
-            "Ask a question", 
-            placeholder="What were the main decisions taken?",
-            label_visibility="collapsed"
+st.markdown("""
+<div style="
+    font-size:0.8rem;
+    color:var(--text-muted);
+    margin-bottom:0.6rem;
+    margin-top:1rem;
+">
+    Suggested Questions
+</div>
+""", unsafe_allow_html=True)
+
+s1, s2, s3 = st.columns(3)
+
+with s1:
+
+    if st.button(
+        "📌 Main decisions",
+        use_container_width=True
+    ):
+
+        st.session_state.prefill_question = (
+            "What were the main decisions taken?"
         )
-    with col2:
-        send_btn = st.button("Send", use_container_width=True)
 
-    if send_btn and user_input.strip():
-        with st.spinner("🧠 Analysing meeting context..."):
+with s2:
+
+    if st.button(
+        "✅ Action items",
+        use_container_width=True
+    ):
+
+        st.session_state.prefill_question = (
+            "What are the action items?"
+        )
+
+with s3:
+
+    if st.button(
+        "🧠 Key insights",
+        use_container_width=True
+    ):
+
+        st.session_state.prefill_question = (
+            "What are the key insights?"
+        )
+
+# ====================================================
+# CHAT INPUT
+# ====================================================
+
+default_question = st.session_state.get(
+    "prefill_question",
+    ""
+)
+
+col1, col2 = st.columns([6, 1])
+
+with col1:
+
+    user_input = st.text_input(
+
+        "Ask Question",
+
+        value=default_question,
+
+        placeholder=(
+            "Ask anything about the meeting..."
+        ),
+
+        label_visibility="collapsed"
+    )
+
+with col2:
+
+    send_btn = st.button(
+
+        "Send",
+
+        use_container_width=True
+    )
+
+# ====================================================
+# CHAT API REQUEST
+# ====================================================
+
+if send_btn and user_input.strip():
+
+    try:
+
+        # ====================================================
+        # LOADING UI
+        # ====================================================
+
+        thinking_box = st.empty()
+
+        thinking_box.markdown("""
+        <div class="status-bar">
+
+            <div class="status-dot dot-active"></div>
+
+            <span>
+                🧠 AI is analysing meeting context...
+            </span>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ====================================================
+        # API REQUEST
+        # ====================================================
+
+        response = requests.post(
+
+            f"{BACKEND_URL}/chat",
+
+            json={
+
+                "question":
+                user_input.strip(),
+
+                "transcript":
+                transcript,
+
+                "session_id":
+                st.session_state.session_id
+            },
+
+            timeout=600
+        )
+
+        thinking_box.empty()
+
+        # ====================================================
+        # SUCCESS
+        # ====================================================
+
+        if response.status_code == 200:
+
+            data = response.json()
+
+            answer = data.get(
+
+                "answer",
+
+                "No response generated."
+            )
+
+            st.session_state.chat_history.append({
+
+                "role": "user",
+
+                "content":
+                user_input.strip()
+            })
+
+            st.session_state.chat_history.append({
+
+                "role": "assistant",
+
+                "content":
+                answer
+            })
+
+            st.session_state.prefill_question = ""
+
+            st.rerun()
+
+        # ====================================================
+        # FAILED RESPONSE
+        # ====================================================
+
+        else:
+
             try:
-                response = requests.post(
-                    f"{BACKEND_URL}/chat",
-                    json={
-                        "question": user_input.strip(),
-                        "transcript": transcript
-                    },
-                    timeout=600
+
+                error_data = response.json()
+
+                error_message = error_data.get(
+
+                    "error",
+
+                    "Failed to get response from AI."
                 )
-                if response.status_code == 200:
-                    answer = response.json().get("answer", "No response generated.")
-                    st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
-                    st.session_state.chat_history.append({"role": "assistant", "content": answer})
-                    st.rerun()
-                else:
-                    st.error("Failed to get response from AI.")
-            except Exception as e:
-                st.error(f"Chat error: {e}")
 
-    # Clear Chat Button
-    if st.session_state.chat_history and st.button("🗑️ Clear Conversation", type="secondary"):
-        st.session_state.chat_history = []
-        st.rerun()
+            except Exception:
 
+                error_message = (
+                    response.text
+                )
+
+            st.error(
+                f"❌ {error_message}"
+            )
+
+    except requests.Timeout:
+
+        st.error("""
+        ⏱️ AI response timed out.
+
+        Please try again with
+        a shorter or clearer question.
+        """)
+
+    except Exception as e:
+
+        st.error(
+            f"❌ Chat Error:\n{str(e)}"
+        )
+
+# ====================================================
+# CLEAR CHAT
+# ====================================================
+
+if (
+
+    st.session_state.chat_history
+
+    and
+
+    st.button(
+
+        "🗑️ Clear Conversation",
+
+        type="secondary"
+    )
+):
+
+    st.session_state.chat_history = []
+
+    st.rerun()
 # ========================================================
 # EMPTY STATE
 # ========================================================

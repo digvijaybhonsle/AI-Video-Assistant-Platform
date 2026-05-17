@@ -34,6 +34,7 @@ load_dotenv()
 # ============================================================
 
 _llm_cache = {}
+RAG_CACHE = {}
 
 # ============================================================
 # GET LLM
@@ -104,13 +105,23 @@ def format_docs(
 # ============================================================
 # BUILD RAG CHAIN
 # ============================================================
-
 def build_rag_chain(
-    transcript: str
+
+    transcript: str,
+
+    session_id: str
 ):
 
     try:
+        if session_id in RAG_CACHE:
 
+            print(
+                "⚡ Using cached RAG chain"
+            )
+
+            return RAG_CACHE[
+                session_id
+            ]
         print(
             "\n🧠 Building RAG chain..."
         )
@@ -194,7 +205,7 @@ Context:
             "✅ RAG chain ready"
         )
 
-        return {
+        rag_chain = {
 
             "retriever": retriever,
 
@@ -203,6 +214,16 @@ Context:
             "llm": llm,
         }
 
+        # ====================================================
+        # CACHE SESSION
+        # ====================================================
+
+        RAG_CACHE[
+            session_id
+        ] = rag_chain
+
+        return rag_chain
+
     except Exception as e:
 
         print(
@@ -210,6 +231,19 @@ Context:
         )
 
         return None
+    
+# ============================================================
+# GET EXISTING RAG
+# ============================================================
+
+def get_rag_chain(
+
+    session_id: str
+):
+
+    return RAG_CACHE.get(
+        session_id
+    )
 
 # ============================================================
 # ASK QUESTION
