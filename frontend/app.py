@@ -301,7 +301,6 @@ def render_step_bar(label: str, key: str, icon: str):
     </div>
     """, unsafe_allow_html=True)
 
-
 # ─── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     # Hero Section
@@ -311,15 +310,10 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("""
-    <div class="hero-sub">
-        Meeting Intelligence Platform
-    </div>
-    """, unsafe_allow_html=True)
-    
+    st.markdown('<div class="hero-sub">Meeting Intelligence Platform</div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    # Backend Status Card
+    # Backend Status
     backend_status = "🟢 Online" if st.session_state.backend_online else "🔴 Offline"
     st.markdown(f"""
     <div class="card" style="padding:0.8rem 1rem">
@@ -334,23 +328,26 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Input Section
+    # ── Input Section ─────────────────────────────────────
     st.markdown('<span class="badge badge-purple">Meeting Input</span>', unsafe_allow_html=True)
 
     source = st.text_input(
         "YouTube URL",
-        placeholder="https://youtube.com/watch?v=..."
+        placeholder="https://youtube.com/watch?v=...",
+        key="youtube_input"
     )
 
     uploaded_file = st.file_uploader(
         "Upload Audio / Video",
-        type=["mp4", "mp3", "wav", "m4a", "mov"]
+        type=["mp4", "mp3", "wav", "m4a", "mov", "mpeg4"],
+        key="file_uploader"          # ← Important for persistence
     )
 
     language = st.selectbox(
         "Language",
         ["english", "hinglish"],
-        index=0
+        index=0,
+        key="language_select"
     )
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -358,28 +355,31 @@ with st.sidebar:
     run_btn = st.button(
         "⚡ Analyse Meeting",
         use_container_width=True,
-        type="primary"
+        type="primary",
+        key="analyse_btn"
     )
 
-    # Uploaded File Info
-    if uploaded_file:
+    # ── Uploaded File Info (Improved) ─────────────────────
+    if uploaded_file is not None:
         file_size_mb = uploaded_file.size / (1024 * 1024)
+        st.success(f"✅ File ready: **{uploaded_file.name}**")
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">📁 Uploaded File</div>
+            <div class="card-title">📁 UPLOADED FILE</div>
             <div class="card-content">
                 <strong>{uploaded_file.name}</strong><br><br>
-                Size: {file_size_mb:.2f} MB
+                Size: <strong>{file_size_mb:.2f} MB</strong><br>
+                Type: {uploaded_file.type.split('/')[-1].upper()}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # Pipeline Status
+    # ── Pipeline Status ───────────────────────────────────
     st.markdown('<span class="badge badge-green">Pipeline Status</span>', unsafe_allow_html=True)
 
-    if st.session_state.processing:
+    if st.session_state.get("processing", False):
         st.markdown(f"""
         <div class="status-bar">
             <div class="status-dot dot-active"></div>
@@ -390,13 +390,13 @@ with st.sidebar:
         st.markdown("""
         <div class="status-bar">
             <div class="status-dot dot-pending"></div>
-            <span>Waiting for analysis...</span>
+            <span>Ready • Waiting for input</span>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Pipeline Steps
+    # ── Pipeline Steps ────────────────────────────────────
     for step_key, icon, label in PIPELINE_STEPS:
         render_step_bar(label, step_key, icon)
 
