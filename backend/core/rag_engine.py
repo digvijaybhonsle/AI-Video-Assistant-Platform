@@ -1,6 +1,8 @@
 # rag_engine.py
 
 import os
+import traceback
+
 
 from typing import List
 
@@ -342,13 +344,8 @@ def ask_question(
         return answer
 
     except Exception as e:
+        traceback.print_exc()
 
-        print(
-            f"❌ RAG Error:\n{e}"
-        )
-
-        return (
-            "Sorry, I encountered an "
-            "error while processing "
-            "your question."
-        )
+    raise Exception(
+        f"RAG processing failed: {str(e)}"
+    )

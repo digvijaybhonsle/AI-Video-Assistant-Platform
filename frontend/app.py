@@ -1111,9 +1111,14 @@ if send_btn and user_input.strip():
                         error_data = response.json()
 
                         error_message = error_data.get(
-                            "error",
-                            "Unknown backend error."
+                            "error"
                         )
+
+                        if not error_message:
+
+                            error_message = (
+                                f"Status {response.status_code}"
+                            )
 
                     except Exception:
 

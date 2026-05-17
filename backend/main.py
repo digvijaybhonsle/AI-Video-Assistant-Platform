@@ -374,12 +374,29 @@ async def chat_with_meeting(
         # GENERATE ANSWER
         # ====================================================
 
-        answer = ask_question(
+        try:
 
-            rag_chain,
+            answer = ask_question(
 
-            question
-        )
+                rag_chain,
+
+                question
+            )
+
+        except Exception as rag_error:
+
+            traceback.print_exc()
+
+            return JSONResponse(
+
+                status_code=500,
+
+                content={
+
+                    "error":
+                    f"RAG Error:\n{str(rag_error)}"
+                }
+            )
 
         duration = (
             time.time()
