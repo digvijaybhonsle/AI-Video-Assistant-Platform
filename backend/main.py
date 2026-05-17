@@ -236,7 +236,7 @@ async def analyze_file(
 
 from pydantic import BaseModel
 
-from backend.core.rag_engine import (
+from core.rag_engine import (
 
     build_rag_chain,
 

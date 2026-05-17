@@ -18,8 +18,9 @@ from langchain_core.output_parsers import (
     StrOutputParser
 )
 
-from backend.core.vector_store import (
+from core.vector_store import (
     build_vector_store,
+    load_vector_store,
     get_retriever
 )
 

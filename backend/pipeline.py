@@ -3,13 +3,9 @@ import traceback
 
 from dotenv import load_dotenv
 
-from utils.audio_processor import (
-    process_input
-)
+from utils.audio_processor import process_input
 
-from core.transcriber import (
-    transcribe_all
-)
+from core.transcriber import transcribe_all
 
 from core.summarizer import (
     summarize,
@@ -22,12 +18,18 @@ from core.extractor import (
     extract_questions
 )
 
+from core.rag_engine import (
+    build_rag_chain,
+    ask_question
+)
+
 # OPTIONAL RAG IMPORT
 # Delayed for performance
 # from backend.core.rag_engine import (
 #     build_rag_chain,
 #     ask_question
 # )
+
 
 # ========================================================
 # LOAD ENVIRONMENT
@@ -245,7 +247,7 @@ if __name__ == "__main__":
 
     if enable_chat == "y":
 
-        from backend.core.rag_engine import (
+        from core.rag_engine import (
             build_rag_chain,
             ask_question
         )
