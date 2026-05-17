@@ -593,35 +593,17 @@ if run_btn and (source.strip() or uploaded_file):
             complete_step("upload")
 
             update_step(
-
                 "audio",
-
                 "🎵 Whisper AI is processing audio...",
-
                 30
             )
 
-            backend_status_box.markdown("""
-            <div class="card">
+            backend_status_box.info("""
+            🧠 **Whisper AI Transcription in Progress**
 
-                <div class="card-title">
-                    🧠 Whisper AI
-                </div>
-
-                <div class="card-content">
-
-                    AI transcription in progress.
-
-                    <br><br>
-
-                    Large files may take
-                    several minutes.
-
-                </div>
-
-            </div>
-            """, unsafe_allow_html=True)
-
+            Processing uploaded audio file...
+            Large files may take several minutes.
+            """)
             response = requests.post(
 
                 f"{BACKEND_URL}/analyze-file",
