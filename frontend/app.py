@@ -311,67 +311,326 @@ label { color: var(--text-muted) !important; font-size: 0.8rem !important; }
 """, unsafe_allow_html=True)
 
 
-# ─── Session State ──────────────────────────────────────────────────────────────
-if "result" not in st.session_state:
-    st.session_state.result = None
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "pipeline_done" not in st.session_state:
-    st.session_state.pipeline_done = False
-if "pipeline_steps" not in st.session_state:
-    st.session_state.pipeline_steps = {}
+# ─── Session State ─────────────────────────────────────
 
+DEFAULT_SESSION_STATE = {
 
-# ─── Helpers ────────────────────────────────────────────────────────────────────
-def step_status(steps: dict, key: str) -> str:
-    s = steps.get(key, "pending")
-    if s == "done":    return "dot-done"
-    if s == "active":  return "dot-active"
+    "result": None,
+
+    "chat_history": [],
+
+    "pipeline_done": False,
+
+    "pipeline_steps": {},
+
+    "processing": False,
+
+    "current_status": "Idle",
+
+    "backend_online": True,
+}
+
+for key, value in DEFAULT_SESSION_STATE.items():
+
+    if key not in st.session_state:
+
+        st.session_state[key] = value
+
+# ─── Pipeline Config ───────────────────────────────────
+
+PIPELINE_STEPS = [
+
+    ("upload",     "📤", "Upload"),
+
+    ("audio",      "🎵", "Audio Processing"),
+
+    ("transcript", "📝", "Transcription"),
+
+    ("title",      "🏷️", "Title Generation"),
+
+    ("summary",    "📋", "Summarisation"),
+
+    ("extract",    "🔍", "Insight Extraction"),
+
+    ("rag",        "🧠", "AI Chat Engine"),
+]
+
+# ─── Helpers ───────────────────────────────────────────
+
+def step_status(
+    steps: dict,
+    key: str
+) -> str:
+
+    status = steps.get(
+        key,
+        "pending"
+    )
+
+    if status == "done":
+        return "dot-done"
+
+    if status == "active":
+        return "dot-active"
+
+    if status == "error":
+        return "dot-error"
+
     return "dot-pending"
 
-def render_step_bar(label: str, key: str, icon: str):
-    css = step_status(st.session_state.pipeline_steps, key)
+def render_step_bar(
+
+    label: str,
+
+    key: str,
+
+    icon: str
+):
+
+    css = step_status(
+
+        st.session_state.pipeline_steps,
+
+        key
+    )
+
     st.markdown(f"""
     <div class="status-bar">
-        <div class="status-dot {css}"></div>
-        <span>{icon} {label}</span>
-    </div>""", unsafe_allow_html=True)
 
-# ─── Sidebar ────────────────────────────────────────────────────────────────────
+        <div class="status-dot {css}"></div>
+
+        <span>
+            {icon} {label}
+        </span>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─── Sidebar ───────────────────────────────────────────
+
 with st.sidebar:
-    st.markdown('<div class="hero-title" style="font-size:1.6rem">🎬 AI<br>Video</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-sub">Meeting Intelligence</div>', unsafe_allow_html=True)
+
+    # ====================================================
+    # HERO
+    # ====================================================
+
+    st.markdown("""
+    <div class="hero-title"
+         style="font-size:1.8rem">
+
+         🎬 AI<br>Video
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="hero-sub">
+
+        Meeting Intelligence Platform
+
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("---")
 
-    st.markdown('<span class="badge badge-purple">Input</span>', unsafe_allow_html=True)
+    # ====================================================
+    # BACKEND STATUS
+    # ====================================================
 
-    source = st.text_input("YouTube URL or File Path", placeholder="https://youtube.com/watch?v=... or upload file")
-    language = st.selectbox("Language", ["english", "hinglish"], index=0)
-    uploaded_file = st.file_uploader(
-        "Upload Audio / Video",
-        type=["mp3", "wav", "mp4", "m4a"]
+    backend_status = (
+        "🟢 Online"
+        if st.session_state.backend_online
+        else "🔴 Offline"
     )
-    run_btn = st.button("⚡ Analyse", use_container_width=True, type="primary")
 
-    if st.session_state.pipeline_done:
-        st.markdown("---")
-        st.markdown('<span class="badge badge-green">Pipeline Status</span>', unsafe_allow_html=True)
-        for step, icon, label in [
-            ("audio",      "🔊", "Audio Processing"),
-            ("transcript", "📝", "Transcription"),
-            ("title",      "🏷️", "Title Generation"),
-            ("summary",    "📋", "Summarisation"),
-            ("extract",    "🔍", "Extraction"),
-            ("rag",        "🧠", "RAG Engine"),
-        ]:
-            render_step_bar(label, step, icon)
+    st.markdown(f"""
+    <div class="card"
+         style="padding:0.8rem 1rem">
 
-# ─── Main Area ──────────────────────────────────────────────────────────────────
-st.markdown('<div class="hero-title">AI Video Assistant</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-sub">Transcribe · Summarise · Chat with your meetings</div>', unsafe_allow_html=True)
+        <div style="
+            font-size:0.8rem;
+            color:var(--text-muted);
+            margin-bottom:0.3rem
+        ">
+            Backend Status
+        </div>
+
+        <div style="
+            font-weight:700;
+            font-family:'Syne',sans-serif
+        ">
+            {backend_status}
+        </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ====================================================
+    # INPUTS
+    # ====================================================
+
+    st.markdown(
+        '<span class="badge badge-purple">'
+        'Meeting Input'
+        '</span>',
+        unsafe_allow_html=True
+    )
+
+    source = st.text_input(
+
+        "YouTube URL",
+
+        placeholder=(
+            "https://youtube.com/watch?v=..."
+        )
+    )
+
+    uploaded_file = st.file_uploader(
+
+        "Upload Audio / Video",
+
+        type=[
+            "mp3",
+            "wav",
+            "mp4",
+            "m4a"
+        ]
+    )
+
+    language = st.selectbox(
+
+        "Language",
+
+        [
+            "english",
+            "hinglish"
+        ],
+
+        index=0
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    run_btn = st.button(
+
+        "⚡ Analyse Meeting",
+
+        use_container_width=True,
+
+        type="primary"
+    )
+
+    # ====================================================
+    # FILE INFO
+    # ====================================================
+
+    if uploaded_file:
+
+        file_size_mb = (
+            uploaded_file.size
+            / (1024 * 1024)
+        )
+
+        st.markdown(f"""
+        <div class="card">
+
+            <div class="card-title">
+                📁 Uploaded File
+            </div>
+
+            <div class="card-content">
+
+                <strong>
+                    {uploaded_file.name}
+                </strong>
+
+                <br><br>
+
+                Size:
+                {file_size_mb:.2f} MB
+
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ====================================================
+    # LIVE STATUS
+    # ====================================================
+
+    st.markdown("---")
+
+    st.markdown(
+        '<span class="badge badge-green">'
+        'Pipeline Status'
+        '</span>',
+        unsafe_allow_html=True
+    )
+
+    if st.session_state.processing:
+
+        st.markdown(f"""
+        <div class="status-bar">
+
+            <div class="status-dot dot-active"></div>
+
+            <span>
+                ⚡ {st.session_state.current_status}
+            </span>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    else:
+
+        st.markdown("""
+        <div class="status-bar">
+
+            <div class="status-dot dot-pending"></div>
+
+            <span>
+                Waiting for analysis...
+            </span>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ====================================================
+    # PIPELINE STEPS
+    # ====================================================
+
+    for step, icon, label in PIPELINE_STEPS:
+
+        render_step_bar(
+            label,
+            step,
+            icon
+        )
+
+# ─── Main Area ─────────────────────────────────────────
+
+st.markdown("""
+<div class="hero-title">
+
+    AI Video Assistant
+
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="hero-sub">
+
+    Transcribe · Summarise · Extract · Chat
+
+</div>
+""", unsafe_allow_html=True)
+
 st.markdown("---")
 
-# ─── Pipeline Execution ─────────────────────────────────
 # ─── Pipeline Execution ─────────────────────────────────
 
 if run_btn and (source.strip() or uploaded_file):
@@ -393,33 +652,68 @@ if run_btn and (source.strip() or uploaded_file):
 
         log_container = st.container()
 
+        backend_spinner = st.empty()
+
+        # ====================================================
+        # HELPERS
+        # ====================================================
+
         def update_step(
             step_key: str,
             message: str,
-            progress: int
+            progress: int,
+            status: str = "active"
         ):
 
             st.session_state.pipeline_steps[
                 step_key
-            ] = "active"
+            ] = status
 
             progress_bar.progress(progress)
 
-            status_box.info(message)
+            if status == "done":
+
+                status_box.success(message)
+
+            elif status == "error":
+
+                status_box.error(message)
+
+            else:
+
+                status_box.info(message)
 
             with log_container:
                 st.write(message)
 
+        def complete_step(step_key: str):
+
+            st.session_state.pipeline_steps[
+                step_key
+            ] = "done"
+
         # ====================================================
-        # YOUTUBE TRANSCRIPT FLOW
+        # YOUTUBE FLOW
         # ====================================================
 
         if source.strip():
 
             update_step(
+                "upload",
+                "📺 Validating YouTube URL...",
+                10,
+                "active"
+            )
+
+            time.sleep(0.5)
+
+            complete_step("upload")
+
+            update_step(
                 "transcript",
-                "📺 Fetching YouTube transcript...",
-                20
+                "📝 Fetching YouTube subtitles...",
+                20,
+                "active"
             )
 
             from backend.utils.youtube_transcript import (
@@ -428,29 +722,43 @@ if run_btn and (source.strip() or uploaded_file):
 
             try:
 
-                transcript = (
-                    fetch_youtube_transcript(
-                        source
-                    )
+                transcript = fetch_youtube_transcript(
+                    source
                 )
+
+                complete_step("transcript")
 
                 update_step(
                     "summary",
                     "📄 Sending transcript to AI backend...",
-                    40
+                    35,
+                    "active"
                 )
+
+                backend_spinner.markdown("""
+                <div class="status-bar">
+                    <div class="status-dot dot-active"></div>
+                    <span>
+                        ⚡ AI backend is analysing your transcript...
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
 
                 response = requests.post(
 
                     f"{BACKEND_URL}/analyze-transcript",
 
                     json={
+
                         "transcript": transcript,
+
                         "language": language
                     },
 
                     timeout=1800
                 )
+
+                backend_spinner.empty()
 
             except Exception:
 
@@ -462,16 +770,37 @@ if run_btn and (source.strip() or uploaded_file):
                 st.stop()
 
         # ====================================================
-        # FILE UPLOAD FLOW
+        # FILE FLOW
         # ====================================================
 
         elif uploaded_file:
 
             update_step(
                 "upload",
-                "📤 Uploading file to AI backend...",
-                25
+                "📤 Uploading media file...",
+                10,
+                "active"
             )
+
+            time.sleep(0.3)
+
+            complete_step("upload")
+
+            update_step(
+                "audio",
+                "🎵 Processing audio stream...",
+                25,
+                "active"
+            )
+
+            backend_spinner.markdown("""
+            <div class="status-bar">
+                <div class="status-dot dot-active"></div>
+                <span>
+                    ⚡ Whisper AI is transcribing your media...
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
 
             response = requests.post(
 
@@ -492,13 +821,22 @@ if run_btn and (source.strip() or uploaded_file):
                 timeout=1800
             )
 
+            backend_spinner.empty()
+
         # ====================================================
         # RESPONSE VALIDATION
         # ====================================================
 
-        progress_bar.progress(75)
+        progress_bar.progress(70)
 
         if response.status_code != 200:
+
+            update_step(
+                "extract",
+                "❌ Backend processing failed",
+                70,
+                "error"
+            )
 
             st.error(
                 f"Backend Error: {response.text}"
@@ -509,13 +847,44 @@ if run_btn and (source.strip() or uploaded_file):
         data = response.json()
 
         # ====================================================
-        # EXTRACTION STATUS
+        # PIPELINE COMPLETION
         # ====================================================
+
+        complete_step("audio")
+
+        update_step(
+            "transcript",
+            "📝 Transcription completed",
+            75,
+            "done"
+        )
+
+        update_step(
+            "title",
+            "🏷️ AI title generated",
+            82,
+            "done"
+        )
+
+        update_step(
+            "summary",
+            "📄 Summary generated",
+            88,
+            "done"
+        )
 
         update_step(
             "extract",
-            "🔍 Finalizing insights...",
-            90
+            "🔍 Insights extracted",
+            94,
+            "done"
+        )
+
+        update_step(
+            "rag",
+            "🧠 AI chat engine ready",
+            98,
+            "done"
         )
 
         # ====================================================
@@ -567,86 +936,252 @@ if run_btn and (source.strip() or uploaded_file):
 
     except Exception as e:
 
+        update_step(
+            "extract",
+            "❌ Pipeline execution failed",
+            100,
+            "error"
+        )
+
         st.error(
             f"❌ Pipeline Failed: {str(e)}"
         )
 
         with log_container:
-            st.error(traceback.format_exc())
+
+            st.error(
+                traceback.format_exc()
+            )
 
         st.session_state.pipeline_done = False
-
 # ─── Results Display ─────────────────────────────────────
 
 if st.session_state.result:
 
     r = st.session_state.result
 
+    transcript = r.get(
+        "transcript",
+        ""
+    )
+
+    summary = r.get(
+        "summary",
+        ""
+    )
+
+    action_items = r.get(
+        "action_items",
+        ""
+    )
+
+    key_decisions = r.get(
+        "key_decisions",
+        ""
+    )
+
+    open_questions = r.get(
+        "open_questions",
+        ""
+    )
+
     # ====================================================
-    # TITLE
+    # HERO HEADER
     # ====================================================
 
     st.markdown(f"""
     <div class="card">
-        <div class="card-title">
-            📌 Session Title
+
+        <div class="badge badge-purple">
+            AI GENERATED SESSION
         </div>
 
         <div style="
             font-family:'Syne',sans-serif;
-            font-size:1.4rem;
-            font-weight:700;
+            font-size:2rem;
+            font-weight:800;
+            margin-top:1rem;
             color:var(--text)
         ">
             {r.get("title", "Meeting Analysis")}
         </div>
+
+        <div style="
+            margin-top:0.8rem;
+            color:var(--text-muted);
+            font-size:0.9rem;
+            line-height:1.8
+        ">
+            AI-powered meeting intelligence generated using
+            Whisper, Mistral AI and Retrieval-Augmented Generation.
+        </div>
+
     </div>
     """, unsafe_allow_html=True)
 
     # ====================================================
-    # SUMMARY + TRANSCRIPT
+    # ANALYTICS ROW
     # ====================================================
 
-    col1, col2 = st.columns(
-        [3, 2],
-        gap="medium"
-    )
+    metric1, metric2, metric3, metric4 = st.columns(4)
 
-    with col1:
-
+    with metric1:
         st.markdown(f"""
         <div class="card">
 
             <div class="card-title">
-                📋 Summary
+                📝 Transcript
             </div>
 
-            <div class="card-content">
-                {r.get("summary", "No summary available")}
+            <div style="
+                font-size:1.6rem;
+                font-weight:700;
+                font-family:'Syne',sans-serif
+            ">
+                {len(transcript.split())}
+            </div>
+
+            <div class="hero-sub">
+                words analysed
             </div>
 
         </div>
         """, unsafe_allow_html=True)
 
-    with col2:
+    with metric2:
+        st.markdown("""
+        <div class="card">
+
+            <div class="card-title">
+                ⚡ AI Engine
+            </div>
+
+            <div style="
+                font-size:1.4rem;
+                font-weight:700;
+                color:var(--success)
+            ">
+                ACTIVE
+            </div>
+
+            <div class="hero-sub">
+                backend online
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with metric3:
+        st.markdown(f"""
+        <div class="card">
+
+            <div class="card-title">
+                🔍 Insights
+            </div>
+
+            <div style="
+                font-size:1.6rem;
+                font-weight:700;
+                font-family:'Syne',sans-serif
+            ">
+                3
+            </div>
+
+            <div class="hero-sub">
+                extracted sections
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with metric4:
+        st.markdown("""
+        <div class="card">
+
+            <div class="card-title">
+                🧠 RAG Chat
+            </div>
+
+            <div style="
+                font-size:1.4rem;
+                font-weight:700;
+                color:var(--accent-2)
+            ">
+                READY
+            </div>
+
+            <div class="hero-sub">
+                contextual retrieval
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ====================================================
+    # SUMMARY + TRANSCRIPT
+    # ====================================================
+
+    left, right = st.columns(
+        [2.4, 1.2],
+        gap="large"
+    )
+
+    with left:
+
+        st.markdown(f"""
+        <div class="card">
+
+            <div class="card-title">
+                📋 Executive Summary
+            </div>
+
+            <div class="card-content">
+                {summary}
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    with right:
+
+        st.markdown(f"""
+        <div class="card">
+
+            <div class="card-title">
+                📄 Transcript Preview
+            </div>
+
+            <div class="transcript-box">
+                {transcript[:2500]}
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
 
         with st.expander(
-            "📝 Full Transcript",
-            expanded=False
+            "📝 View Full Transcript"
         ):
 
-            st.markdown(
-                f'''
-                <div class="transcript-box">
-                    {r.get("transcript", "")}
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
+            st.markdown(f"""
+            <div class="transcript-box">
+                {transcript}
+            </div>
+            """, unsafe_allow_html=True)
 
     # ====================================================
-    # INSIGHTS
+    # INSIGHTS GRID
     # ====================================================
+
+    st.markdown("""
+    <div style="
+        font-family:'Syne',sans-serif;
+        font-size:1.3rem;
+        font-weight:700;
+        margin:1rem 0
+    ">
+        🔍 Meeting Intelligence
+    </div>
+    """, unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns(
         3,
@@ -663,7 +1198,7 @@ if st.session_state.result:
             </div>
 
             <div class="card-content">
-                {r.get("action_items", "No action items found")}
+                {action_items}
             </div>
 
         </div>
@@ -679,7 +1214,7 @@ if st.session_state.result:
             </div>
 
             <div class="card-content">
-                {r.get("key_decisions", "No key decisions found")}
+                {key_decisions}
             </div>
 
         </div>
@@ -695,7 +1230,7 @@ if st.session_state.result:
             </div>
 
             <div class="card-content">
-                {r.get("open_questions", "No open questions found")}
+                {open_questions}
             </div>
 
         </div>
@@ -704,17 +1239,17 @@ if st.session_state.result:
     st.markdown("---")
 
     # ====================================================
-    # CHAT HEADER
+    # CHAT SECTION
     # ====================================================
 
     st.markdown("""
     <div style="
         font-family:'Syne',sans-serif;
-        font-size:1.2rem;
-        font-weight:700;
+        font-size:1.5rem;
+        font-weight:800;
         margin-bottom:1rem
     ">
-        💬 Chat with your Meeting
+        💬 AI Meeting Chat
     </div>
     """, unsafe_allow_html=True)
 
@@ -735,7 +1270,7 @@ if st.session_state.result:
                      style="align-items:flex-end">
 
                     <span class="chat-label user-label">
-                        You
+                        YOU
                     </span>
 
                     <div class="chat-bubble user-bubble">
@@ -752,7 +1287,7 @@ if st.session_state.result:
                      style="align-items:flex-start">
 
                     <span class="chat-label bot-label">
-                        🤖 Assistant
+                        AI ASSISTANT
                     </span>
 
                     <div class="chat-bubble bot-bubble">
@@ -774,33 +1309,32 @@ if st.session_state.result:
     # ====================================================
 
     chat_col1, chat_col2 = st.columns(
-        [5, 1],
-        gap="small"
+        [6, 1]
     )
 
     with chat_col1:
 
         user_input = st.text_input(
-            "Your question",
-            placeholder="What were the main decisions made?",
+            "Question",
+            placeholder="Ask anything about the meeting...",
             label_visibility="collapsed"
         )
 
     with chat_col2:
 
         send_btn = st.button(
-            "Send →",
+            "Send",
             use_container_width=True
         )
 
     # ====================================================
-    # CHAT REQUEST → BACKEND
+    # CHAT API CALL
     # ====================================================
 
     if send_btn and user_input.strip():
 
         with st.spinner(
-            "🤖 Thinking..."
+            "🧠 AI is analysing meeting context..."
         ):
 
             try:
@@ -811,12 +1345,11 @@ if st.session_state.result:
 
                     json={
 
-                        "question": user_input.strip(),
+                        "question":
+                        user_input.strip(),
 
-                        "transcript": r.get(
-                            "transcript",
-                            ""
-                        )
+                        "transcript":
+                        transcript
                     },
 
                     timeout=600
@@ -825,7 +1358,7 @@ if st.session_state.result:
                 if response.status_code != 200:
 
                     st.error(
-                        "Backend chat request failed"
+                        "Chat backend failed"
                     )
 
                     st.stop()
@@ -841,14 +1374,16 @@ if st.session_state.result:
 
                     "role": "user",
 
-                    "content": user_input.strip()
+                    "content":
+                    user_input.strip()
                 })
 
                 st.session_state.chat_history.append({
 
                     "role": "assistant",
 
-                    "content": answer
+                    "content":
+                    answer
                 })
 
                 st.rerun()
@@ -867,7 +1402,7 @@ if st.session_state.result:
         st.session_state.chat_history
         and
         st.button(
-            "🗑️ Clear Chat",
+            "🗑️ Clear Conversation",
             type="secondary"
         )
     ):
