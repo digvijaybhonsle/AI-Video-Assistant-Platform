@@ -1021,132 +1021,193 @@ if st.session_state.result:
     st.markdown("---")
 
 # ====================================================
-# CHAT SECTION
+# AI CHAT SECTION
 # ====================================================
-st.markdown("""
-<div style="font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; margin:2rem 0 1rem 0;">
-    💬 AI Video Chat
-</div>
-""", unsafe_allow_html=True)
+
+st.subheader("💬 AI Video Chat")
+
+st.caption(
+    "Context-aware conversational retrieval powered by RAG"
+)
+
+st.markdown("")
 
 # ====================================================
 # CHAT HISTORY
 # ====================================================
-if st.session_state.chat_history:
-    chat_html = '<div class="chat-container">'
-    for msg in st.session_state.chat_history:
-        if msg["role"] == "user":
-            chat_html += f"""
-            <div class="chat-msg" style="align-items:flex-end">
-                <span class="chat-label user-label">YOU</span>
-                <div class="chat-bubble user-bubble">{msg['content']}</div>
-            </div>"""
-        else:
-            chat_html += f"""
-            <div class="chat-msg" style="align-items:flex-start">
-                <span class="chat-label bot-label">🤖 AI ASSISTANT</span>
-                <div class="chat-bubble bot-bubble">{msg['content']}</div>
-            </div>"""
-    chat_html += '</div>'
-    st.markdown(chat_html, unsafe_allow_html=True)
 
-else:
-    # Clean Empty Chat State
-    st.markdown("""
-    <div class="card" style="text-align:center; padding:3rem 2rem;">
-        <div style="font-size:3.5rem; margin-bottom:1rem; opacity:0.7;">💬</div>
-        <div style="font-size:1.15rem; font-weight:600; margin-bottom:0.8rem;">
-            No conversation yet
-        </div>
-        <div style="color:var(--text-muted); line-height:1.6;">
-            Start chatting with the AI about your video content.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+chat_container = st.container()
+
+with chat_container:
+
+    if st.session_state.chat_history:
+
+        for msg in st.session_state.chat_history:
+
+            if msg["role"] == "user":
+
+                with st.chat_message("user"):
+
+                    st.markdown(
+                        msg["content"]
+                    )
+
+            else:
+
+                with st.chat_message("assistant"):
+
+                    st.markdown(
+                        msg["content"]
+                    )
+
+    else:
+
+        st.info(
+            """
+Start chatting with the AI about your video.
+
+You can ask:
+- What were the key insights?
+- What decisions were made?
+- Summarize the discussion
+- Extract important action items
+- Explain specific concepts
+"""
+        )
 
 # ====================================================
 # CHAT INPUT
 # ====================================================
-col1, col2 = st.columns([6, 1], gap="small")
+
+st.markdown("")
+
+col1, col2 = st.columns([6, 1])
 
 with col1:
+
     user_input = st.text_input(
-        "Ask a question about the video",
-        placeholder="What were the main decisions made?",
+        "Ask AI",
+        placeholder="Ask anything about the video...",
         label_visibility="collapsed",
         key="chat_input"
     )
 
 with col2:
-    send_btn = st.button("Send", use_container_width=True, key="send_btn")
+
+    send_btn = st.button(
+        "Send",
+        use_container_width=True
+    )
 
 # ====================================================
-# HANDLE CHAT SUBMISSION
+# HANDLE CHAT
 # ====================================================
+
 if send_btn and user_input.strip():
+
     if not st.session_state.result:
-        st.warning("Please analyse a video first before asking questions.")
+
+        st.warning(
+            "Please analyse a video first."
+        )
+
     else:
-        with st.spinner("🧠 AI is thinking based on video content..."):
+
+        with st.spinner(
+            "🧠 AI is analyzing transcript..."
+        ):
+
             try:
-                transcript = st.session_state.result.get("transcript", "")
+
+                transcript = (
+                    st.session_state
+                    .result
+                    .get("transcript", "")
+                )
 
                 response = requests.post(
+
                     f"{BACKEND_URL}/chat",
+
                     json={
-                        "question": user_input.strip(),
-                        "transcript": transcript
+
+                        "question":
+                        user_input.strip(),
+
+                        "transcript":
+                        transcript,
+
+                        "session_id":
+                        st.session_state.session_id
                     },
+
                     timeout=600
                 )
 
                 if response.status_code == 200:
-                    answer = response.json().get("answer", "I couldn't generate a response.")
-                    st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
-                    st.session_state.chat_history.append({"role": "assistant", "content": answer})
+
+                    answer = response.json().get(
+
+                        "answer",
+
+                        "No response generated."
+                    )
+
+                    st.session_state.chat_history.append({
+
+                        "role": "user",
+
+                        "content": user_input.strip()
+                    })
+
+                    st.session_state.chat_history.append({
+
+                        "role": "assistant",
+
+                        "content": answer
+                    })
+
                     st.rerun()
+
                 else:
+
                     try:
 
                         error_data = response.json()
 
                         error_message = error_data.get(
-                            "error"
+
+                            "error",
+
+                            f"Status {response.status_code}"
                         )
-
-                        if not error_message:
-
-                            error_message = (
-                                f"Status {response.status_code}"
-                            )
 
                     except Exception:
 
                         error_message = response.text
 
                     st.error(
-                        f"❌ Backend Error:\n{error_message}"
+                        f"Backend Error:\n{error_message}"
                     )
+
             except Exception as e:
-                st.error(f"Chat error: {str(e)}")
 
-# Clear Chat Button
-if st.session_state.chat_history and st.button("🗑️ Clear Chat History", type="secondary"):
-    st.session_state.chat_history = []
-    st.rerun()
+                st.error(
+                    f"Chat error:\n{str(e)}"
+                )
 
+# ====================================================
+# CLEAR CHAT
+# ====================================================
 
-# ========================================================
-# EMPTY STATE (Only shown when no result)
-# ========================================================
-if not st.session_state.result:
-    st.markdown("""
-    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6rem 2rem; text-align:center;">
-        <div style="font-size:6rem; margin-bottom:1.5rem;">🎬</div>
-        <h2 style="font-family:'Syne',sans-serif; margin-bottom:0.8rem;">Ready to Analyse Any Video</h2>
-        <p style="color:var(--text-muted); max-width:460px; font-size:1rem; line-height:1.7;">
-            Paste a YouTube URL or upload an audio/video file to unlock AI-powered transcription, 
-            summarization, and intelligent chat.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+if st.session_state.chat_history:
+
+    st.markdown("")
+
+    if st.button(
+        "🗑️ Clear Chat History"
+    ):
+
+        st.session_state.chat_history = []
+
+        st.rerun()

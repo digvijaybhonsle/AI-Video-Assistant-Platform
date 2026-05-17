@@ -7,6 +7,7 @@ from fastapi import (
 from fastapi.middleware.cors import (
     CORSMiddleware
 )
+from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 
 import tempfile
@@ -432,5 +433,116 @@ async def chat_with_meeting(
 
                 "error":
                 f"Chat failed:\n{str(e)}"
+            }
+        )
+    
+class TranscriptRequest(BaseModel):
+
+    transcript: str
+
+    language: str = "english"
+
+
+@app.post("/analyze-transcript")
+
+async def analyze_transcript(
+
+    request: TranscriptRequest
+):
+
+    try:
+
+        print("\n" + "=" * 60)
+        print("📝 Incoming Transcript Analysis")
+        print("=" * 60)
+
+        transcript = request.transcript
+
+        language = request.language
+
+        if (
+            not transcript
+            or
+            len(transcript.strip()) < 50
+        ):
+
+            return JSONResponse(
+
+                status_code=400,
+
+                content={
+
+                    "error":
+                    "Transcript too short."
+                }
+            )
+
+        print(
+            f"📄 Transcript Length: "
+            f"{len(transcript)} chars"
+        )
+
+        # ====================================================
+        # GENERATE AI OUTPUTS
+        # ====================================================
+
+        title = generate_title(
+            transcript
+        )
+
+        summary = summarize(
+            transcript
+        )
+
+        action_items = (
+            extract_action_items(
+                transcript
+            )
+        )
+
+        decisions = (
+            extract_key_decisions(
+                transcript
+            )
+        )
+
+        questions = (
+            extract_questions(
+                transcript
+            )
+        )
+
+        return JSONResponse(
+
+            status_code=200,
+
+            content={
+
+                "title": title,
+
+                "transcript": transcript,
+
+                "summary": summary,
+
+                "action_items": action_items,
+
+                "key_decisions": decisions,
+
+                "open_questions": questions,
+            }
+        )
+
+    except Exception as e:
+
+        traceback.print_exc()
+
+        return JSONResponse(
+
+            status_code=500,
+
+            content={
+
+                "error":
+                f"Transcript analysis failed:\n{str(e)}"
             }
         )
