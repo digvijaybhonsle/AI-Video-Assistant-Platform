@@ -260,6 +260,8 @@ DEFAULT_SESSION_STATE = {
     "processing": False,
     "current_status": "Idle",
     "backend_online": True,
+    "session_id": uuid.uuid4().hex,
+    "prefill_question": "",
 }
 
 for key, default_value in DEFAULT_SESSION_STATE.items():
@@ -1105,7 +1107,7 @@ if st.session_state.result:
 
     st.markdown("---")
 
-    # ====================================================
+# ====================================================
 # CHAT SECTION
 # ====================================================
 
@@ -1136,11 +1138,11 @@ st.markdown("""
         Ask questions about:
         <br><br>
 
-        • key decisions  
-        • action items  
-        • meeting discussions  
-        • speaker insights  
-        • technical details  
+        • key decisions<br>
+        • action items<br>
+        • meeting discussions<br>
+        • speaker insights<br>
+        • technical details<br>
         • future tasks
 
     </div>
@@ -1149,10 +1151,55 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ====================================================
+# EMPTY CHAT STATE
+# ====================================================
+
+if not st.session_state.chat_history:
+
+    st.markdown("""
+    <div class="card">
+
+        <div class="card-content"
+             style="
+             text-align:center;
+             padding:2rem;
+             ">
+
+            <div style="
+                font-size:3rem;
+                margin-bottom:1rem;
+            ">
+                🤖
+            </div>
+
+            <div style="
+                font-size:1.1rem;
+                font-weight:700;
+                margin-bottom:0.5rem;
+            ">
+                No conversation yet
+            </div>
+
+            <div style="
+                color:var(--text-muted);
+                font-size:0.92rem;
+                line-height:1.7;
+            ">
+                Ask questions about your meeting,
+                transcript, decisions, action items,
+                or technical discussion.
+            </div>
+
+        </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+# ====================================================
 # CHAT HISTORY
 # ====================================================
 
-if st.session_state.chat_history:
+else:
 
     chat_html = """
     <div class="chat-container">
@@ -1200,26 +1247,6 @@ if st.session_state.chat_history:
         chat_html,
         unsafe_allow_html=True
     )
-
-else:
-
-    st.markdown("""
-    <div class="card">
-
-        <div class="card-content"
-             style="text-align:center">
-
-            No questions asked yet.
-
-            <br><br>
-
-            Start chatting with your
-            AI-powered meeting assistant.
-
-        </div>
-
-    </div>
-    """, unsafe_allow_html=True)
 
 # ====================================================
 # SUGGESTED QUESTIONS
@@ -1290,9 +1317,7 @@ with col1:
 
         value=default_question,
 
-        placeholder=(
-            "Ask anything about the meeting..."
-        ),
+        placeholder="Ask anything about the meeting...",
 
         label_visibility="collapsed"
     )
@@ -1300,23 +1325,17 @@ with col1:
 with col2:
 
     send_btn = st.button(
-
         "Send",
-
         use_container_width=True
     )
 
 # ====================================================
-# CHAT API REQUEST
+# CHAT REQUEST
 # ====================================================
 
 if send_btn and user_input.strip():
 
     try:
-
-        # ====================================================
-        # LOADING UI
-        # ====================================================
 
         thinking_box = st.empty()
 
@@ -1331,10 +1350,6 @@ if send_btn and user_input.strip():
 
         </div>
         """, unsafe_allow_html=True)
-
-        # ====================================================
-        # API REQUEST
-        # ====================================================
 
         response = requests.post(
 
@@ -1357,18 +1372,12 @@ if send_btn and user_input.strip():
 
         thinking_box.empty()
 
-        # ====================================================
-        # SUCCESS
-        # ====================================================
-
         if response.status_code == 200:
 
             data = response.json()
 
             answer = data.get(
-
                 "answer",
-
                 "No response generated."
             )
 
@@ -1392,10 +1401,6 @@ if send_btn and user_input.strip():
 
             st.rerun()
 
-        # ====================================================
-        # FAILED RESPONSE
-        # ====================================================
-
         else:
 
             try:
@@ -1403,21 +1408,15 @@ if send_btn and user_input.strip():
                 error_data = response.json()
 
                 error_message = error_data.get(
-
                     "error",
-
                     "Failed to get response from AI."
                 )
 
             except Exception:
 
-                error_message = (
-                    response.text
-                )
+                error_message = response.text
 
-            st.error(
-                f"❌ {error_message}"
-            )
+            st.error(f"❌ {error_message}")
 
     except requests.Timeout:
 
@@ -1425,29 +1424,22 @@ if send_btn and user_input.strip():
         ⏱️ AI response timed out.
 
         Please try again with
-        a shorter or clearer question.
+        a shorter question.
         """)
 
     except Exception as e:
 
-        st.error(
-            f"❌ Chat Error:\n{str(e)}"
-        )
+        st.error(f"❌ Chat Error:\n{str(e)}")
 
 # ====================================================
 # CLEAR CHAT
 # ====================================================
 
 if (
-
     st.session_state.chat_history
-
     and
-
     st.button(
-
         "🗑️ Clear Conversation",
-
         type="secondary"
     )
 ):
@@ -1455,6 +1447,7 @@ if (
     st.session_state.chat_history = []
 
     st.rerun()
+    
 # ========================================================
 # EMPTY STATE
 # ========================================================
