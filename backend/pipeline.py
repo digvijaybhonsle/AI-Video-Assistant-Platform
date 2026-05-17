@@ -3,20 +3,20 @@ import traceback
 
 from dotenv import load_dotenv
 
-from backend.utils.audio_processor import (
+from utils.audio_processor import (
     process_input
 )
 
-from backend.core.transcriber import (
+from core.transcriber import (
     transcribe_all
 )
 
-from backend.core.summarizer import (
+from core.summarizer import (
     summarize,
     generate_title
 )
 
-from backend.core.extractor import (
+from core.extractor import (
     extract_action_items,
     extract_key_decisions,
     extract_questions
