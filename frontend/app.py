@@ -313,7 +313,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown('<div class="hero-sub">Meeting Intelligence Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-sub">Intelligence Platform</div>', unsafe_allow_html=True)
     st.markdown("---")
 
     # Backend Status
@@ -332,7 +332,7 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Input Section ─────────────────────────────────────
-    st.markdown('<span class="badge badge-purple">Meeting Input</span>', unsafe_allow_html=True)
+    st.markdown('<span class="badge badge-purple">Input</span>', unsafe_allow_html=True)
 
     source = st.text_input(
         "YouTube URL",
@@ -356,7 +356,7 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
 
     run_btn = st.button(
-        "⚡ Analyse Meeting",
+        "⚡ Analyse Audio",
         use_container_width=True,
         type="primary",
         key="analyse_btn"
@@ -791,7 +791,7 @@ if run_btn and (source.strip() or uploaded_file):
 
             "extract",
 
-            "🔍 Meeting insights extracted",
+            "🔍 Video insights extracted",
 
             95,
 
@@ -817,7 +817,7 @@ if run_btn and (source.strip() or uploaded_file):
 
             "title": data.get(
                 "title",
-                "Meeting Analysis"
+                "Video Analysis"
             ),
 
             "transcript": data.get(
@@ -993,10 +993,10 @@ if st.session_state.result:
     <div class="card">
         <div class="badge badge-purple">AI GENERATED SESSION</div>
         <div style="font-family:'Syne',sans-serif; font-size:2.1rem; font-weight:800; margin:1rem 0 0.5rem 0;">
-            {r.get("title", "Meeting Analysis")}
+            {r.get("title", "Video Analysis")}
         </div>
         <div style="color:var(--text-muted); font-size:0.9rem; line-height:1.6;">
-            AI-powered meeting intelligence generated using Whisper, Mistral AI & RAG
+            AI-powered video intelligence generated using Whisper, Mistral AI & RAG
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1075,7 +1075,7 @@ if st.session_state.result:
     # ====================================================
     st.markdown("""
     <div style="font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:700; margin:1.2rem 0 1rem 0;">
-        🔍 Meeting Intelligence
+        🔍 Video Intelligence
     </div>
     """, unsafe_allow_html=True)
 
@@ -1110,348 +1110,103 @@ if st.session_state.result:
 # ====================================================
 # CHAT SECTION
 # ====================================================
-
 st.markdown("""
-<div style="
-    font-family:'Syne',sans-serif;
-    font-size:1.5rem;
-    font-weight:800;
-    margin-bottom:1rem;
-">
-    💬 AI Meeting Chat
+<div style="font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; margin:2rem 0 1rem 0;">
+    💬 AI Video Chat
 </div>
 """, unsafe_allow_html=True)
-
-# ====================================================
-# CHAT STATUS CARD
-# ====================================================
-
-st.markdown("""
-<div class="card" style="margin-bottom:1rem">
-
-    <div class="card-title">
-        🧠 Context-Aware AI Assistant
-    </div>
-
-    <div class="card-content">
-
-        Ask questions about:
-        <br><br>
-
-        • key decisions<br>
-        • action items<br>
-        • meeting discussions<br>
-        • speaker insights<br>
-        • technical details<br>
-        • future tasks
-
-    </div>
-
-</div>
-""", unsafe_allow_html=True)
-
-# ====================================================
-# EMPTY CHAT STATE
-# ====================================================
-
-if not st.session_state.chat_history:
-
-    st.markdown("""
-    <div class="card">
-
-        <div class="card-content"
-             style="
-             text-align:center;
-             padding:2rem;
-             ">
-
-            <div style="
-                font-size:3rem;
-                margin-bottom:1rem;
-            ">
-                🤖
-            </div>
-
-            <div style="
-                font-size:1.1rem;
-                font-weight:700;
-                margin-bottom:0.5rem;
-            ">
-                No conversation yet
-            </div>
-
-            <div style="
-                color:var(--text-muted);
-                font-size:0.92rem;
-                line-height:1.7;
-            ">
-                Ask questions about your meeting,
-                transcript, decisions, action items,
-                or technical discussion.
-            </div>
-
-        </div>
-
-    </div>
-    """, unsafe_allow_html=True)
 
 # ====================================================
 # CHAT HISTORY
 # ====================================================
+if st.session_state.chat_history:
+    chat_html = '<div class="chat-container">'
+    for msg in st.session_state.chat_history:
+        if msg["role"] == "user":
+            chat_html += f"""
+            <div class="chat-msg" style="align-items:flex-end">
+                <span class="chat-label user-label">YOU</span>
+                <div class="chat-bubble user-bubble">{msg['content']}</div>
+            </div>"""
+        else:
+            chat_html += f"""
+            <div class="chat-msg" style="align-items:flex-start">
+                <span class="chat-label bot-label">🤖 AI ASSISTANT</span>
+                <div class="chat-bubble bot-bubble">{msg['content']}</div>
+            </div>"""
+    chat_html += '</div>'
+    st.markdown(chat_html, unsafe_allow_html=True)
 
 else:
-
-    chat_html = """
-    <div class="chat-container">
-    """
-
-    for msg in st.session_state.chat_history:
-
-        if msg["role"] == "user":
-
-            chat_html += f"""
-            <div class="chat-msg"
-                 style="align-items:flex-end">
-
-                <span class="chat-label user-label">
-                    YOU
-                </span>
-
-                <div class="chat-bubble user-bubble">
-                    {msg['content']}
-                </div>
-
-            </div>
-            """
-
-        else:
-
-            chat_html += f"""
-            <div class="chat-msg"
-                 style="align-items:flex-start">
-
-                <span class="chat-label bot-label">
-                    AI ASSISTANT
-                </span>
-
-                <div class="chat-bubble bot-bubble">
-                    {msg['content']}
-                </div>
-
-            </div>
-            """
-
-    chat_html += "</div>"
-
-    st.markdown(
-        chat_html,
-        unsafe_allow_html=True
-    )
-
-# ====================================================
-# SUGGESTED QUESTIONS
-# ====================================================
-
-st.markdown("""
-<div style="
-    font-size:0.8rem;
-    color:var(--text-muted);
-    margin-bottom:0.6rem;
-    margin-top:1rem;
-">
-    Suggested Questions
-</div>
-""", unsafe_allow_html=True)
-
-s1, s2, s3 = st.columns(3)
-
-with s1:
-
-    if st.button(
-        "📌 Main decisions",
-        use_container_width=True
-    ):
-
-        st.session_state.prefill_question = (
-            "What were the main decisions taken?"
-        )
-
-with s2:
-
-    if st.button(
-        "✅ Action items",
-        use_container_width=True
-    ):
-
-        st.session_state.prefill_question = (
-            "What are the action items?"
-        )
-
-with s3:
-
-    if st.button(
-        "🧠 Key insights",
-        use_container_width=True
-    ):
-
-        st.session_state.prefill_question = (
-            "What are the key insights?"
-        )
+    # Clean Empty Chat State
+    st.markdown("""
+    <div class="card" style="text-align:center; padding:3rem 2rem;">
+        <div style="font-size:3.5rem; margin-bottom:1rem; opacity:0.7;">💬</div>
+        <div style="font-size:1.15rem; font-weight:600; margin-bottom:0.8rem;">
+            No conversation yet
+        </div>
+        <div style="color:var(--text-muted); line-height:1.6;">
+            Start chatting with the AI about your video content.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ====================================================
 # CHAT INPUT
 # ====================================================
-
-default_question = st.session_state.get(
-    "prefill_question",
-    ""
-)
-
-col1, col2 = st.columns([6, 1])
+col1, col2 = st.columns([6, 1], gap="small")
 
 with col1:
-
     user_input = st.text_input(
-
-        "Ask Question",
-
-        value=default_question,
-
-        placeholder="Ask anything about the meeting...",
-
-        label_visibility="collapsed"
+        "Ask a question about the video",
+        placeholder="What were the main decisions made?",
+        label_visibility="collapsed",
+        key="chat_input"
     )
 
 with col2:
-
-    send_btn = st.button(
-        "Send",
-        use_container_width=True
-    )
+    send_btn = st.button("Send", use_container_width=True, key="send_btn")
 
 # ====================================================
-# CHAT REQUEST
+# HANDLE CHAT SUBMISSION
 # ====================================================
-
 if send_btn and user_input.strip():
-
-    try:
-
-        thinking_box = st.empty()
-
-        thinking_box.markdown("""
-        <div class="status-bar">
-
-            <div class="status-dot dot-active"></div>
-
-            <span>
-                🧠 AI is analysing meeting context...
-            </span>
-
-        </div>
-        """, unsafe_allow_html=True)
-
-        response = requests.post(
-
-            f"{BACKEND_URL}/chat",
-
-            json={
-
-                "question":
-                user_input.strip(),
-
-                "transcript":
-                transcript,
-
-                "session_id":
-                st.session_state.session_id
-            },
-
-            timeout=600
-        )
-
-        thinking_box.empty()
-
-        if response.status_code == 200:
-
-            data = response.json()
-
-            answer = data.get(
-                "answer",
-                "No response generated."
-            )
-
-            st.session_state.chat_history.append({
-
-                "role": "user",
-
-                "content":
-                user_input.strip()
-            })
-
-            st.session_state.chat_history.append({
-
-                "role": "assistant",
-
-                "content":
-                answer
-            })
-
-            st.session_state.prefill_question = ""
-
-            st.rerun()
-
-        else:
-
+    if not st.session_state.result:
+        st.warning("Please analyse a video first before asking questions.")
+    else:
+        with st.spinner("🧠 AI is thinking based on video content..."):
             try:
+                transcript = st.session_state.result.get("transcript", "")
 
-                error_data = response.json()
-
-                error_message = error_data.get(
-                    "error",
-                    "Failed to get response from AI."
+                response = requests.post(
+                    f"{BACKEND_URL}/chat",
+                    json={
+                        "question": user_input.strip(),
+                        "transcript": transcript
+                    },
+                    timeout=600
                 )
 
-            except Exception:
+                if response.status_code == 200:
+                    answer = response.json().get("answer", "I couldn't generate a response.")
+                    st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
+                    st.session_state.chat_history.append({"role": "assistant", "content": answer})
+                    st.rerun()
+                else:
+                    st.error("Failed to get response from AI.")
+            except Exception as e:
+                st.error(f"Chat error: {str(e)}")
 
-                error_message = response.text
-
-            st.error(f"❌ {error_message}")
-
-    except requests.Timeout:
-
-        st.error("""
-        ⏱️ AI response timed out.
-
-        Please try again with
-        a shorter question.
-        """)
-
-    except Exception as e:
-
-        st.error(f"❌ Chat Error:\n{str(e)}")
-
-# ====================================================
-# CLEAR CHAT
-# ====================================================
-
-if (
-    st.session_state.chat_history
-    and
-    st.button(
-        "🗑️ Clear Conversation",
-        type="secondary"
-    )
-):
-
+# Clear Chat Button
+if st.session_state.chat_history and st.button("🗑️ Clear Chat History", type="secondary"):
     st.session_state.chat_history = []
-
     st.rerun()
-    
+
+
 # ========================================================
-# EMPTY STATE
+# EMPTY STATE (Only shown when no result)
 # ========================================================
-else:
+if not st.session_state.result:
     st.markdown("""
     <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6rem 2rem; text-align:center;">
         <div style="font-size:6rem; margin-bottom:1.5rem;">🎬</div>
