@@ -13,8 +13,7 @@ os.environ["PYTORCH_JIT"] = "0"
 os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
 
 BACKEND_URL = os.getenv(
-    "BACKEND_URL",
-    "http://127.0.0.1:8000"
+    "BACKEND_URL"
 )
 
 # ─── Page Config ────────────────────────────────────────────────────────────────
