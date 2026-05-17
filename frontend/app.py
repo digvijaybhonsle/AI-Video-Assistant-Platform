@@ -1106,7 +1106,22 @@ if send_btn and user_input.strip():
                     st.session_state.chat_history.append({"role": "assistant", "content": answer})
                     st.rerun()
                 else:
-                    st.error("Failed to get response from AI.")
+                    try:
+
+                        error_data = response.json()
+
+                        error_message = error_data.get(
+                            "error",
+                            "Unknown backend error."
+                        )
+
+                    except Exception:
+
+                        error_message = response.text
+
+                    st.error(
+                        f"❌ Backend Error:\n{error_message}"
+                    )
             except Exception as e:
                 st.error(f"Chat error: {str(e)}")
 

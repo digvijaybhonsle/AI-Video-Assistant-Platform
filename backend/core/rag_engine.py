@@ -138,7 +138,7 @@ def build_rag_chain(
             )
 
         # Prevent memory spikes
-        transcript = transcript[:50000]
+        transcript = transcript[:15000]
 
         # ====================================================
         # VECTOR STORE

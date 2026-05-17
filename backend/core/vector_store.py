@@ -72,31 +72,6 @@ def get_embeddings():
 
     return _embeddings
 
-# ============================================================
-# CLEAN CHROMA STORAGE
-# ============================================================
-
-def cleanup_chroma():
-
-    try:
-
-        if os.path.exists(
-            CHROMA_DIR
-        ):
-
-            shutil.rmtree(
-                CHROMA_DIR
-            )
-
-            print(
-                "🧹 Old Chroma DB removed"
-            )
-
-    except Exception as e:
-
-        print(
-            f"⚠️ Chroma cleanup failed:\n{e}"
-        )
 
 # ============================================================
 # BUILD VECTOR STORE
@@ -132,21 +107,15 @@ def build_vector_store(
     transcript = transcript[:50000]
 
     # ========================================================
-    # CLEANUP OLD DB
-    # ========================================================
-
-    cleanup_chroma()
-
-    # ========================================================
     # SPLITTER
     # ========================================================
 
     splitter = (
         RecursiveCharacterTextSplitter(
 
-            chunk_size=400,
+            chunk_size=600,
 
-            chunk_overlap=40,
+            chunk_overlap=60,
 
             separators=[
                 "\n\n",
@@ -229,8 +198,6 @@ def build_vector_store(
             embedding=embeddings,
 
             collection_name=collection_name,
-
-            persist_directory=CHROMA_DIR
         )
     )
 
